@@ -1,19 +1,19 @@
-name: storefront service ci
+name: pricing service ci
 
 on:
   push:
     branches: [ "main" ]
     paths:
-      - "storefront/**"
+      - "pricing/**"
       - ".github/workflows/actions/action.yaml"
-      - ".github/workflows/storefront-ci.yaml"
+      - ".github/workflows/pricing-ci.yaml"
       - "pom.xml"
   pull_request:
     branches: [ "main" ]
     paths:
-      - "storefront/**"
+      - "pricing/**"
       - ".github/workflows/actions/action.yaml"
-      - ".github/workflows/storefront-ci.yaml"
+      - ".github/workflows/pricing-ci.yaml"
       - "pom.xml"
   workflow_dispatch:
 
@@ -28,21 +28,21 @@ jobs:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
       - name: Run Maven Build Command
-        run: mvn clean install -DskipTests -f storefront
+        run: mvn clean install -DskipTests -f pricing
       - name: Run Maven Test
-        run: mvn test -f storefront
+        run: mvn test -f pricing
       - name: Unit Test Results
         uses: dorny/test-reporter@v1
         if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Unit-Test-Results
-          path: "storefront/**/surefire-reports/*.xml"
+          path: "pricing/**/surefire-reports/*.xml"
           reporter: java-junit
       - name: Analyze with sonar cloud
         if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f storefront
+        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f pricing
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -54,6 +54,6 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/build-push-action@v6
         with:
-          context: ./storefront
+          context: ./pricing
           push: true
-          tags: ghcr.io/nashtech-garage/yas-storefront:latest
+          tags: ghcr.io/nashtech-garage/yas-pricing:latest
