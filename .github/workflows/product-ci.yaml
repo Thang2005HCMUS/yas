@@ -2,7 +2,7 @@ name: product service ci
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "**" ]
     paths:
       - "product/**"
       - ".github/workflows/actions/action.yaml"
@@ -38,11 +38,11 @@ jobs:
           name: Unit-Test-Results
           path: "product/**/surefire-reports/*.xml"
           reporter: java-junit
-      - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f product
+      # - name: Analyze with sonar cloud
+      #   if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      #   run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f product
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
