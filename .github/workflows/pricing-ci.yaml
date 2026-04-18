@@ -2,7 +2,7 @@ name: pricing service ci
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "**" ]
     paths:
       - "pricing/**"
       - ".github/workflows/actions/action.yaml"

@@ -2,7 +2,7 @@ name: {{SERVICE_NAME}} service ci
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "**" ]
     paths:
       - "{{SERVICE_NAME}}/**"
       - ".github/workflows/actions/action.yaml"
