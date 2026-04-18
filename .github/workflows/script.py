@@ -42,5 +42,5 @@ with open(OUTPUT_FILE, "w", encoding="utf-8") as output:
             output.write(f"======{relative_path} content ======:\n")
             output.write(content)
             output.write("\n\n")
-
+print()
 print(f"Đã ghi xong vào {OUTPUT_FILE}")
