@@ -20,9 +20,6 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         return http
-            .csrf(csrf -> csrf
-                .ignoringRequestMatchers("/storefront/sampledata", "/actuator/**", "/swagger-ui/**", "/v3/api-docs/**", "/error")
-            )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/sampledata/**").permitAll()
                 .requestMatchers("/actuator/prometheus", "/actuator/health/**",
