@@ -2,6 +2,9 @@ package com.yas.cart.service;
 
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import com.yas.commonlibrary.config.ServiceUrlConfig;
@@ -62,6 +65,44 @@ class ProductServiceTest {
         assertThat(result.get(0).id()).isEqualTo(1);
         assertThat(result.get(1).id()).isEqualTo(2);
         assertThat(result.get(2).id()).isEqualTo(3);
+    }
+
+    @Test
+    void getProductById_whenProductExists_thenReturnFirstResult() {
+        ProductService serviceSpy = Mockito.spy(productService);
+        ProductThumbnailVm expected = new ProductThumbnailVm(1L, "Product 1", "product-1", "http://example.com/1.jpg");
+        Mockito.doReturn(List.of(expected)).when(serviceSpy).getProducts(List.of(1L));
+
+        ProductThumbnailVm result = serviceSpy.getProductById(1L);
+
+        assertThat(result).isEqualTo(expected);
+    }
+
+    @Test
+    void getProductById_whenProductMissing_thenReturnNull() {
+        ProductService serviceSpy = Mockito.spy(productService);
+        Mockito.doReturn(List.of()).when(serviceSpy).getProducts(List.of(5L));
+
+        ProductThumbnailVm result = serviceSpy.getProductById(5L);
+
+        assertNull(result);
+    }
+
+    @Test
+    void existsById_whenProductExists_thenReturnTrue() {
+        ProductService serviceSpy = Mockito.spy(productService);
+        Mockito.doReturn(new ProductThumbnailVm(2L, "Product 2", "product-2", "url"))
+            .when(serviceSpy).getProductById(2L);
+
+        assertTrue(serviceSpy.existsById(2L));
+    }
+
+    @Test
+    void existsById_whenProductMissing_thenReturnFalse() {
+        ProductService serviceSpy = Mockito.spy(productService);
+        Mockito.doReturn(null).when(serviceSpy).getProductById(2L);
+
+        assertFalse(serviceSpy.existsById(2L));
     }
 
     private List<ProductThumbnailVm> getProductThumbnailVms() {
