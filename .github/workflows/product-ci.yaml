@@ -30,7 +30,7 @@ jobs:
       - name: Run Maven Build Command
         run: mvn clean install -DskipTests -pl product -am -f pom.xml
       - name: Run Maven Verify
-        run: mvn verify -DskipITs -pl product -am -f pom.xml
+        run: mvn verify -pl product -am -f pom.xml
       - name: Unit Test Results
         uses: dorny/test-reporter@v1
         if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
