@@ -38,6 +38,26 @@ jobs:
           name: Unit-Test-Results
           path: "product/**/surefire-reports/*.xml"
           reporter: java-junit
+      - name: Enforce coverage threshold (>=70%)
+        run: |
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          report_path = Path("product/target/site/jacoco/jacoco.xml")
+          if not report_path.exists():
+              raise SystemExit("JaCoCo report not found at product/target/site/jacoco/jacoco.xml")
+          root = ET.parse(report_path).getroot()
+          line_counter = next((c for c in root.findall("counter") if c.attrib.get("type") == "LINE"), None)
+          if line_counter is None:
+              raise SystemExit("No LINE counter in JaCoCo report")
+          missed = int(line_counter.attrib["missed"])
+          covered = int(line_counter.attrib["covered"])
+          total = missed + covered
+          coverage = (covered / total * 100.0) if total else 0.0
+          print(f"Line coverage: {covered}/{total} = {coverage:.2f}%")
+          if coverage < 70.0:
+              raise SystemExit(f"Coverage gate failed: {coverage:.2f}% < 70.00%")
+          PY
       - name: Upload JaCoCo report artifacts
         uses: actions/upload-artifact@v4
         if: ${{ success() || failure() }}
