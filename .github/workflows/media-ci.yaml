@@ -33,7 +33,6 @@ jobs:
         run: mvn test -f media
       - name: Unit Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Unit-Test-Results
           path: "media/**/surefire-reports/*.xml"

@@ -39,7 +39,6 @@ jobs:
           path: '**/recommendation-checkstyle-result.xml'
       - name: Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Recommendation-Service-Unit-Test-Results
           path: "recommendation/**/*-reports/TEST*.xml"

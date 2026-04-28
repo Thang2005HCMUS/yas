@@ -38,7 +38,6 @@ jobs:
           path: '**/order-checkstyle-result.xml'
       - name: Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Order-Service-Unit-Test-Results
           path: "order/**/*-reports/TEST*.xml"

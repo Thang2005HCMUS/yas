@@ -39,7 +39,6 @@ jobs:
           path: '**/tax-checkstyle-result.xml'
       - name: Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Tax-Service-Unit-Test-Results
           path: "tax/**/*-reports/TEST*.xml"
