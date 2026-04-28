@@ -44,6 +44,7 @@ jobs:
           path: "webhook/**/*-reports/TEST*.xml"
           reporter: java-junit
       - name: Analyze with sonar cloud
+        id: sonar
         
         continue-on-error: true
         env:

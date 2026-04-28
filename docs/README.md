@@ -79,6 +79,7 @@ jobs:
           path: "product/**/surefire-reports/*.xml"
           reporter: java-junit
       - name: Analyze with sonar cloud
+        id: sonar
         if: ${{ github.event.pull_request.head.repo.full_name == github.repository || github.ref == 'refs/heads/main' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

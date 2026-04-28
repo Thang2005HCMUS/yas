@@ -38,6 +38,7 @@ jobs:
         with:
           path: '**/storefront-bff-checkstyle-result.xml'
       - name: Analyze with sonar cloud
+        id: sonar
         
         continue-on-error: true
         env:

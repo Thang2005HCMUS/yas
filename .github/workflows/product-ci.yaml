@@ -67,6 +67,7 @@ jobs:
             product/target/site/jacoco/jacoco.xml
             product/target/site/jacoco/jacoco.csv
       - name: Analyze with sonar cloud
+        id: sonar
         
         continue-on-error: true
         env:

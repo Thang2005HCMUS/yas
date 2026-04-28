@@ -38,6 +38,7 @@ jobs:
           path: "backoffice-bff/**/surefire-reports/*.xml"
           reporter: java-junit
       - name: Analyze with sonar cloud
+        id: sonar
         continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
