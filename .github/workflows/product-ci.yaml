@@ -68,7 +68,7 @@ jobs:
             product/target/site/jacoco/jacoco.xml
             product/target/site/jacoco/jacoco.csv
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && github.event_name == 'push' }}
+        
         continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
