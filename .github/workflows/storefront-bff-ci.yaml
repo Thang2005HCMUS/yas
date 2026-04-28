@@ -2,7 +2,7 @@ name: storefront-bff service ci
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["**"]
     paths:
       - "storefront-bff/**"
       - ".github/workflows/actions/action.yaml"
@@ -38,10 +38,14 @@ jobs:
         with:
           path: '**/storefront-bff-checkstyle-result.xml'
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && github.event_name == 'push' }}
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f storefront-bff
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl storefront-bff -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=product/target/site/jacoco/jacoco.xml
       - name: OWASP Dependency Check
         if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         uses: dependency-check/Dependency-Check_Action@main

@@ -39,7 +39,7 @@ name: product service ci
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["**"]
     paths:
       - "product/**"
       - ".github/workflows/actions/action.yaml"

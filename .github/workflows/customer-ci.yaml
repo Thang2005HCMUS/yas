@@ -2,7 +2,7 @@ name: customer service ci
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["**"]
     paths:
       - "customer/**"
       - ".github/workflows/actions/action.yaml"
@@ -45,10 +45,14 @@ jobs:
           path: "customer/**/*-reports/TEST*.xml"
           reporter: java-junit
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && github.event_name == 'push' }}
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f customer
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl customer -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=product/target/site/jacoco/jacoco.xml
       - name: OWASP Dependency Check
         if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         uses: dependency-check/Dependency-Check_Action@main

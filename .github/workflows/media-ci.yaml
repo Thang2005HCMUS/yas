@@ -39,10 +39,14 @@ jobs:
           path: "media/**/surefire-reports/*.xml"
           reporter: java-junit
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && github.event_name == 'push' }}
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f media
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl media -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=product/target/site/jacoco/jacoco.xml
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
