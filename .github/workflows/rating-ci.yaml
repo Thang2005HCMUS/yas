@@ -55,19 +55,34 @@ jobs:
       - name: SonarCloud Summary
         if: always()
         run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
           {
-            echo "## SonarCloud Result"
+            echo "## SonarCloud Report"
             echo ""
-            - Raw result: ${{ steps.sonar.outcome }}
-            - Final result: ${{ steps.sonar.conclusion }}
-            echo "- Service: **cart**"
-            echo "- Branch/Ref: **${{ github.ref_name }}**"
-            echo "- Commit: \`${{ github.sha }}\`"
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`cart\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
             echo ""
             echo "### Dashboard"
             echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
             echo ""
-            echo "> Nếu fail do Quality Gate thì xem log step SonarCloud."
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
           } >> $GITHUB_STEP_SUMMARY
       - name: OWASP Dependency Check
         
