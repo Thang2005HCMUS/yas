@@ -1,0 +1,35 @@
+name: summary test
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+jobs:
+  demo-summary:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fake build
+        run: echo "Building project..."
+
+      - name: Write Summary
+        run: |
+          echo "## CI Summary Test 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Build: Success ✅" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Runner: ubuntu-latest" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | Passed ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests | Passed ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| Deploy | Skipped ⏭️ |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Done
+        run: echo "Finished."
