@@ -62,7 +62,7 @@ jobs:
         run: >
           mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
           -pl inventory -am -f pom.xml
-          -Dsonar.coverage.jacoco.xmlReportPaths=product/target/site/jacoco/jacoco.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=inventory/target/site/jacoco/jacoco.xml
       - name: Add coverage report to PR
         uses: madrapps/jacoco-report@v1.6.1
 
