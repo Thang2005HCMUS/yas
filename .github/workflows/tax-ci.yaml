@@ -79,7 +79,7 @@ jobs:
             echo "| Status | $ICON **$STATUS** |"
             echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
             echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
-            echo "| Service | \`${{ env.SERVICE_NAME }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
             echo "| Branch | \`${{ github.ref_name }}\` |"
             echo "| Commit | \`${{ github.sha }}\` |"
             echo "| Actor | \`${{ github.actor }}\` |"
