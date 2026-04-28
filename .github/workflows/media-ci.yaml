@@ -28,9 +28,9 @@ jobs:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
       - name: Run Maven Build Command
-        run: mvn clean install -DskipTests -f media
-      - name: Run Maven Test
-        run: mvn test -f media
+        run: mvn clean install -DskipTests -pl media -am -f pom.xml
+      - name: Run Maven Verify
+        run: mvn verify -DskipITs -pl media -am -f pom.xml
       - name: Unit Test Results
         uses: dorny/test-reporter@v1
         if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
@@ -38,11 +38,43 @@ jobs:
           name: Unit-Test-Results
           path: "media/**/surefire-reports/*.xml"
           reporter: java-junit
+      - name: Enforce coverage threshold (>=70%)
+        run: |
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          report_path = Path("media/target/site/jacoco/jacoco.xml")
+          if not report_path.exists():
+              raise SystemExit("JaCoCo report not found at media/target/site/jacoco/jacoco.xml")
+          root = ET.parse(report_path).getroot()
+          line_counter = next((c for c in root.findall("counter") if c.attrib.get("type") == "LINE"), None)
+          if line_counter is None:
+              raise SystemExit("No LINE counter in JaCoCo report")
+          missed = int(line_counter.attrib["missed"])
+          covered = int(line_counter.attrib["covered"])
+          total = missed + covered
+          coverage = (covered / total * 100.0) if total else 0.0
+          print(f"Line coverage: {covered}/{total} = {coverage:.2f}%")
+          if coverage < 70.0:
+              raise SystemExit(f"Coverage gate failed: {coverage:.2f}% < 70.00%")
+          PY
+      - name: Upload JaCoCo report artifacts
+        uses: actions/upload-artifact@v4
+        if: ${{ success() || failure() }}
+        with:
+          name: media-jacoco-report
+          path: |
+            media/target/site/jacoco/index.html
+            media/target/site/jacoco/jacoco.xml
+            media/target/site/jacoco/jacoco.csv
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && github.event_name == 'push' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f media
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl media -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=media/target/site/jacoco/jacoco.xml
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
