@@ -1,12 +1,14 @@
 package com.yas.media;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -24,6 +26,7 @@ import com.yas.media.service.MediaServiceImpl;
 import com.yas.media.viewmodel.MediaPostVm;
 import com.yas.media.viewmodel.MediaVm;
 import com.yas.media.viewmodel.NoFileMediaVm;
+import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Optional;
 import org.jetbrains.annotations.NotNull;
@@ -111,7 +114,7 @@ class MediaServiceUnitTest {
     }
 
     @Test
-    void saveMedia_whenTypePNG_thenSaveSuccess() {
+    void saveMedia_whenTypePNG_thenSaveSuccess() throws Exception {
         byte[] pngFileContent = new byte[] {};
         MultipartFile multipartFile = new MockMultipartFile(
             "file",
@@ -121,12 +124,15 @@ class MediaServiceUnitTest {
         );
         MediaPostVm mediaPostVm = new MediaPostVm("media", multipartFile, "fileName");
 
+        when(fileSystemRepository.persistFile(eq("fileName"), any(byte[].class))).thenReturn("stored-path");
         when(mediaRepository.save(any(Media.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Media mediaSave = mediaService.saveMedia(mediaPostVm);
         assertNotNull(mediaSave);
         assertEquals("media", mediaSave.getCaption());
         assertEquals("fileName", mediaSave.getFileName());
+        assertEquals("stored-path", mediaSave.getFilePath());
+        verify(fileSystemRepository, times(1)).persistFile(eq("fileName"), any(byte[].class));
     }
 
     @Test
@@ -265,6 +271,20 @@ class MediaServiceUnitTest {
         assertFalse(medias.isEmpty());
         verify(mediaVmMapper, times(existingMedias.size())).toVm(any());
         assertThat(medias).allMatch(m -> m.getUrl() != null);
+    }
+
+    @Test
+    void getFile_whenMediaFoundAndFileNameMatches_thenReturnMediaDto() throws Exception {
+        byte[] expectedContent = "image-content".getBytes();
+        media.setMediaType("image/png");
+        media.setFilePath("stored/path");
+        when(mediaRepository.findById(1L)).thenReturn(Optional.of(media));
+        when(fileSystemRepository.getFile("stored/path")).thenReturn(new ByteArrayInputStream(expectedContent));
+
+        MediaDto mediaDto = mediaService.getFile(1L, "FiLe");
+
+        assertEquals("image/png", mediaDto.getMediaType().toString());
+        assertArrayEquals(expectedContent, mediaDto.getContent().readAllBytes());
     }
 
     private static @NotNull Media getMedia(Long id, String name) {
