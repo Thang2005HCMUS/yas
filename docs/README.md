@@ -67,6 +67,13 @@ jobs:
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
         run: mvn clean install -DskipTests -f product
       - name: Run Maven Test

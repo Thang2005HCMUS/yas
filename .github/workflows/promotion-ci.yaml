@@ -27,6 +27,13 @@ jobs:
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
         run: mvn clean install -pl promotion -am
       - name: Run Maven Checkstyle
@@ -72,7 +79,7 @@ jobs:
             echo "| Status | $ICON **$STATUS** |"
             echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
             echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
-            echo "| Service | \`cart\` |"
+            echo "| Service | \`${{ env.SERVICE_NAME }}\` |"
             echo "| Branch | \`${{ github.ref_name }}\` |"
             echo "| Commit | \`${{ github.sha }}\` |"
             echo "| Actor | \`${{ github.actor }}\` |"
