@@ -34,8 +34,7 @@ jobs:
       - name: Run Maven Checkstyle
         
         run: mvn checkstyle:checkstyle -pl cart -am -f pom.xml -Dcheckstyle.output.file=cart-checkstyle-result.xml
-      - name: Upload Checkstyle Result
-        
+      - name: Upload Checkstyle Result      
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/cart-checkstyle-result.xml'

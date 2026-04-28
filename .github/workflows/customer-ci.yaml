@@ -33,7 +33,6 @@ jobs:
         
         run: mvn checkstyle:checkstyle -pl customer -am -Dcheckstyle.output.file=customer-checkstyle-result.xml
       - name: Upload Checkstyle Result
-        
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/customer-checkstyle-result.xml'

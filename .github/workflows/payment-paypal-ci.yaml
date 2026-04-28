@@ -33,7 +33,6 @@ jobs:
         
         run: mvn checkstyle:checkstyle -pl payment-paypal -am -Dcheckstyle.output.file=payment-paypal-checkstyle-result.xml
       - name: Upload Checkstyle Result
-        
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/payment-paypal-checkstyle-result.xml'
