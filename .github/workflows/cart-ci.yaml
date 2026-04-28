@@ -121,7 +121,8 @@ jobs:
           {
             echo "## SonarCloud Result"
             echo ""
-            echo "- Step status: **${{ steps.sonar.outcome }}**"
+            - Raw result: ${{ steps.sonar.outcome }}
+            - Final result: ${{ steps.sonar.conclusion }}
             echo "- Service: **cart**"
             echo "- Branch/Ref: **${{ github.ref_name }}**"
             echo "- Commit: \`${{ github.sha }}\`"

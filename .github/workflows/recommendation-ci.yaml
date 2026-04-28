@@ -52,6 +52,23 @@ jobs:
           mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
           -pl recommendation -am -f pom.xml
           -Dsonar.coverage.jacoco.xmlReportPaths=recommendation/target/site/jacoco/jacoco.xml
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          {
+            echo "## SonarCloud Result"
+            echo ""
+            - Raw result: ${{ steps.sonar.outcome }}
+            - Final result: ${{ steps.sonar.conclusion }}
+            echo "- Service: **cart**"
+            echo "- Branch/Ref: **${{ github.ref_name }}**"
+            echo "- Commit: \`${{ github.sha }}\`"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "> Nếu fail do Quality Gate thì xem log step SonarCloud."
+          } >> $GITHUB_STEP_SUMMARY
       - name: OWASP Dependency Check
         
         uses: dependency-check/Dependency-Check_Action@main
