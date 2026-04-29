@@ -163,7 +163,7 @@ jobs:
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Cart Coverage Report'
-          update-comment: true
+          update-comment: false
 
       - name: Log in to Container Registry
         if: ${{ github.ref == 'refs/heads/main' }}

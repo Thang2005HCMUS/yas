@@ -74,7 +74,7 @@ jobs:
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Search Coverage Report'
-          update-comment: true
+          update-comment: falsetrue
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -166,7 +166,7 @@ jobs:
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Promotion Coverage Report'
-          update-comment: true
+          update-comment: falsetrue
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -258,7 +258,7 @@ jobs:
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Customer Coverage Report'
-          update-comment: true
+          update-comment: falsetrue
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -350,7 +350,7 @@ jobs:
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Inventory Coverage Report'
-          update-comment: true
+          update-comment: falsetrue
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -442,7 +442,7 @@ jobs:
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Webhook Coverage Report'
-          update-comment: true
+          update-comment: falsetrue
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -534,7 +534,7 @@ jobs:
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Order Coverage Report'
-          update-comment: true
+          update-comment: falsetrue
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -626,7 +626,7 @@ jobs:
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Tax Coverage Report'
-          update-comment: true
+          update-comment: falsetrue
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -903,7 +903,7 @@ jobs:
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Payment Coverage Report'
-          update-comment: true
+          update-comment: falsetrue
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -1084,7 +1084,7 @@ jobs:
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Cart Coverage Report'
-          update-comment: true
+          update-comment: falsetrue
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -1195,7 +1195,7 @@ jobs:
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Recommendation Coverage Report'
-          update-comment: true
+          update-comment: falsetrue
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -1424,7 +1424,7 @@ jobs:
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Payment Paypal Coverage Report'
-          update-comment: true
+          update-comment: falsetrue
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -1509,7 +1509,7 @@ jobs:
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Storefront BFF Coverage Report'
-          update-comment: true
+          update-comment: falsetrue
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -1601,7 +1601,7 @@ jobs:
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Location Coverage Report'
-          update-comment: true
+          update-comment: falsetrue
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -1755,7 +1755,7 @@ jobs:
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Rating Coverage Report'
-          update-comment: true
+          update-comment: falsetrue
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3

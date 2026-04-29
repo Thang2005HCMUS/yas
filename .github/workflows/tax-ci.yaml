@@ -116,7 +116,7 @@ jobs:
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Tax Coverage Report'
-          update-comment: true
+          update-comment: false
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
