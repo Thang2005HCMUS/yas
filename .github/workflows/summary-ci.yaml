@@ -2,22 +2,40 @@ name: CI Dashboard Summary
 
 on:
   workflow_run:
-    workflows: ["* service ci"] # Nghe tất cả các workflow có tên kết thúc bằng 'service ci'
+    workflows: ["* service ci"] # Lắng nghe tất cả workflow có tên kết thúc bằng 'service ci'
     types:
       - completed
 
 jobs:
   Summary:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.event != 'pull_request' }} # Tránh chạy lặp lại nếu không cần thiết
     steps:
       - name: Report Status
         run: |
-          STATUS="${{{{ github.event.workflow_run.conclusion }}}}"
-          WORKFLOW_NAME="${{{{ github.event.workflow_run.name }}}}"
-          if [ "$STATUS" = "success" ]; then ICON="✅"; else ICON="❌"; fi
+          # 1. Lấy thông tin từ workflow vừa kết thúc
+          STATUS="${{ github.event.workflow_run.conclusion }}"
+          WORKFLOW_NAME="${{ github.event.workflow_run.name }}"
+          RUN_NUMBER="${{ github.event.workflow_run.run_number }}"
+          RUN_ID="${{ github.event.workflow_run.id }}"
+          REPO_URL="https://github.com/${{ github.repository }}"
+          RUN_URL="$REPO_URL/actions/runs/$RUN_ID"
           
-          echo "## Dashboard Cập Nhật: $WORKFLOW_NAME" >> $GITHUB_STEP_SUMMARY
+          # 2. Xác định Icon dựa trên trạng thái
+          if [ "$STATUS" = "success" ]; then 
+            ICON="✅ SUCCESS"
+          elif [ "$STATUS" = "failure" ]; then
+            ICON="❌ FAILURE"
+          elif [ "$STATUS" = "cancelled" ]; then
+            ICON="⚪ CANCELLED"
+          else
+            ICON="⚠️ $STATUS"
+          fi
+          
+          # 3. Xuất nội dung ra GITHUB_STEP_SUMMARY (Markdown)
+          echo "## 📊 CI Dashboard Update" >> $GITHUB_STEP_SUMMARY
+          echo "> Cập nhật lúc: $(date +'%Y-%m-%d %H:%M:%S') (UTC)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Service Workflow | Status | Run Number | Link |" >> $GITHUB_STEP_SUMMARY
           echo "|------------------|--------|------------|------|" >> $GITHUB_STEP_SUMMARY
-          echo "| $WORKFLOW_NAME | $ICON $STATUS | ${{{{ github.event.workflow_run.run_number }}}} | [View](${{{{ github.event.workflow_run.html_url }}}}) |" >> $GITHUB_STEP_SUMMARY
-          
+          echo "| **$WORKFLOW_NAME** | $ICON | #$RUN_NUMBER | [Xem chi tiết log]($RUN_URL) |" >> $GITHUB_STEP_SUMMARY
