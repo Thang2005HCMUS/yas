@@ -20,37 +20,40 @@ on:
 jobs:
   Build:
     runs-on: ubuntu-latest
-    env:
-      FROM_ORIGINAL_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name == github.repository || github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
+          fetch-depth: 0
+
       - uses: ./.github/workflows/actions
-      - name: Detect Service Name
-        run: |
-          FILE="${GITHUB_WORKFLOW_REF##*/}"
-          FILE="${FILE%@*}"              # sampledata-ci.yaml
-          SERVICE="${FILE%-ci.yaml}"    # sampledata
 
-          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
-      - name: Detect Service Name
-        run: |
-          FILE="${GITHUB_WORKFLOW_REF##*/}"
-          FILE="${FILE%@*}"              # sampledata-ci.yaml
-          SERVICE="${FILE%-ci.yaml}"    # sampledata
-
-          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
         run: mvn clean install -pl sampledata -am
+
       - name: Run Maven Checkstyle
-        
         run: mvn checkstyle:checkstyle -pl sampledata -am -Dcheckstyle.output.file=sampledata-checkstyle-result.xml
+
       - name: Upload Checkstyle Result
-        
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/sampledata-checkstyle-result.xml'
+
+      - name: Test Results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Sampledata-Unit-Test-Results
+          path: "sampledata/**/*-reports/TEST*.xml"
+          reporter: java-junit
+
+      - name: Upload Jacoco Report for Coverage Job
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report-sampledata
+          path: sampledata/target/site/jacoco/jacoco.xml
+          retention-days: 1
+
       - name: Analyze with sonar cloud
         id: sonar
         continue-on-error: true
@@ -60,6 +63,7 @@ jobs:
           mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
           -pl sampledata -am -f pom.xml
           -Dsonar.coverage.jacoco.xmlReportPaths=sampledata/target/site/jacoco/jacoco.xml
+
       - name: SonarCloud Summary
         if: always()
         run: |
@@ -72,41 +76,18 @@ jobs:
           fi
 
           {
-            echo "## SonarCloud Report"
+            echo "## SonarCloud Report: sampledata"
             echo ""
             echo "| Item | Value |"
             echo "|------|-------|"
             echo "| Status | $ICON **$STATUS** |"
-            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
-            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
-            echo "| Service | \`${SERVICE_NAME}\` |"
-            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Service | \`sampledata\` |"
             echo "| Commit | \`${{ github.sha }}\` |"
-            echo "| Actor | \`${{ github.actor }}\` |"
             echo ""
             echo "### Dashboard"
             echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
-            echo ""
-            echo "### Notes"
-            echo "- If status = FAIL, open Sonar step logs."
-            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
-            echo "- If using continue-on-error, workflow still continues."
           } >> $GITHUB_STEP_SUMMARY
-      - name: OWASP Dependency Check
-        
-        uses: dependency-check/Dependency-Check_Action@main
-        env:
-          JAVA_HOME: /opt/jdk
-        with:
-          project: 'yas'
-          path: '.'
-          format: 'HTML'
-      - name: Upload OWASP Dependency Check results
-        
-        uses: actions/upload-artifact@master
-        with:
-          name: OWASP Dependency Check Report
-          path: ${{github.workspace}}/reports
+
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -114,6 +95,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and push Docker images
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/build-push-action@v6
@@ -121,3 +103,60 @@ jobs:
           context: ./sampledata
           push: true
           tags: ghcr.io/nashtech-garage/yas-sampledata:latest
+
+  Check-Coverage:
+    needs: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download Jacoco Report
+        uses: actions/download-artifact@v4
+        with:
+          name: jacoco-report-sampledata
+          path: target/jacoco-results
+
+      - name: Add coverage report to PR
+        id: jacoco_report
+        uses: madrapps/jacoco-report@v1.6.1
+        with:
+          paths: ${{github.workspace}}/target/jacoco-results/jacoco.xml
+          token: ${{secrets.GITHUB_TOKEN}}
+          min-coverage-overall: 80
+          min-coverage-changed-files: 60
+          title: 'Sampledata Coverage Report'
+          update-comment: true
+
+      - name: Write Coverage Summary
+        if: always()
+        run: |
+          COVERAGE=${{ steps.jacoco_report.outputs.coverage-overall }}
+          THRESHOLD=80
+          
+          if (( $(echo "$COVERAGE >= $THRESHOLD" | bc -l) )); then
+            ICON="✅"
+            STATUS="PASSED"
+          else
+            ICON="❌"
+            STATUS="FAILED"
+          fi
+
+          {
+            echo "## 📊 Coverage Summary: sampledata"
+            echo ""
+            echo "| Metric | Value | Threshold | Status |"
+            echo "|--------|-------|-----------|--------|"
+            echo "| Overall Coverage | $COVERAGE% | $THRESHOLD% | $ICON $STATUS |"
+            echo "| Changed Files | ${{ steps.jacoco_report.outputs.coverage-changed-files }}% | 60% | - |"
+            echo ""
+            echo "Vui lòng kiểm tra chi tiết trong phần bình luận của Pull Request."
+          } >> $GITHUB_STEP_SUMMARY
+
+      - name: Enforce Threshold
+        run: |
+          COVERAGE=${{ steps.jacoco_report.outputs.coverage-overall }}
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "Độ bao phủ code ($COVERAGE%) thấp hơn yêu cầu (80%)!"
+            exit 1
+          fi
