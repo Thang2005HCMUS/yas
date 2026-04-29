@@ -42,7 +42,6 @@ public class SecurityConfig {
             .oauth2Login(Customizer.withDefaults())
             .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
             .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
-            .csrf(ServerHttpSecurity.CsrfSpec::disable)
             .logout(logout -> logout
                 .logoutSuccessHandler(oidcLogoutSuccessHandler())
             )
