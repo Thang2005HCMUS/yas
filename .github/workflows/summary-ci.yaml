@@ -2,26 +2,25 @@ name: CI Dashboard Summary
 
 on:
   workflow_run:
-    workflows: ["* service ci"] # Lắng nghe tất cả workflow có tên kết thúc bằng 'service ci'
     types:
       - completed
 
 jobs:
   Summary:
+    if: endsWith(github.event.workflow_run.name, 'service ci')
     runs-on: ubuntu-latest
+
     steps:
       - name: Report Status
         run: |
-          # 1. Lấy thông tin từ workflow vừa kết thúc
           STATUS="${{ github.event.workflow_run.conclusion }}"
           WORKFLOW_NAME="${{ github.event.workflow_run.name }}"
           RUN_NUMBER="${{ github.event.workflow_run.run_number }}"
           RUN_ID="${{ github.event.workflow_run.id }}"
           REPO_URL="https://github.com/${{ github.repository }}"
           RUN_URL="$REPO_URL/actions/runs/$RUN_ID"
-          
-          # 2. Xác định Icon dựa trên trạng thái
-          if [ "$STATUS" = "success" ]; then 
+
+          if [ "$STATUS" = "success" ]; then
             ICON="✅ SUCCESS"
           elif [ "$STATUS" = "failure" ]; then
             ICON="❌ FAILURE"
@@ -30,11 +29,10 @@ jobs:
           else
             ICON="⚠️ $STATUS"
           fi
-          
-          # 3. Xuất nội dung ra GITHUB_STEP_SUMMARY (Markdown)
+
           echo "## 📊 CI Dashboard Update" >> $GITHUB_STEP_SUMMARY
-          echo "> Cập nhật lúc: $(date +'%Y-%m-%d %H:%M:%S') (UTC)" >> $GITHUB_STEP_SUMMARY
+          echo "> $(TZ=Asia/Ho_Chi_Minh date '+%Y-%m-%d %H:%M:%S') ICT" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Service Workflow | Status | Run Number | Link |" >> $GITHUB_STEP_SUMMARY
-          echo "|------------------|--------|------------|------|" >> $GITHUB_STEP_SUMMARY
-          echo "| **$WORKFLOW_NAME** | $ICON | #$RUN_NUMBER | [Xem chi tiết log]($RUN_URL) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Workflow | Status | Run | Link |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| $WORKFLOW_NAME | $ICON | #$RUN_NUMBER | [View Log]($RUN_URL) |" >> $GITHUB_STEP_SUMMARY
