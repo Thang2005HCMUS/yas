@@ -2,12 +2,31 @@ name: CI Dashboard Summary
 
 on:
   workflow_run:
+    workflows:
+      - search service ci
+      - promotion service ci
+      - customer service ci
+      - inventory service ci
+      - payment service ci
+      - order service ci
+      - tax service ci
+      - rating service ci
+      - location service ci
+      - storefront-bff service ci
+      - backoffice-bff service ci
+      - pricing service ci
+      - product service ci
+      - media service ci
+      - payment-paypal service ci
+      - webhook service ci
+      - sampledata service ci
+      - cart service ci
+      - recommendation service ci
     types:
       - completed
 
 jobs:
   Summary:
-    if: endsWith(github.event.workflow_run.name, 'service ci')
     runs-on: ubuntu-latest
 
     steps:
