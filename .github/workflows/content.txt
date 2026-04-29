@@ -28,30 +28,73 @@ jobs:
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
         run: mvn clean install -pl search -am
       - name: Run Maven Checkstyle
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         run: mvn checkstyle:checkstyle -pl search -am -Dcheckstyle.output.file=search-checkstyle-result.xml
       - name: Upload Checkstyle Result
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/search-checkstyle-result.xml'
       - name: Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Search-Service-Unit-Test-Results
           path: "search/**/*-reports/TEST*.xml"
           reporter: java-junit
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        id: sonar
+        
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f search
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl search -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=search/target/site/jacoco/jacoco.xml
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
       - name: OWASP Dependency Check
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: dependency-check/Dependency-Check_Action@main
         env:
           JAVA_HOME: /opt/jdk
@@ -60,21 +103,21 @@ jobs:
           path: '.'
           format: 'HTML'
       - name: Upload OWASP Dependency Check results
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: actions/upload-artifact@master
         with:
           name: OWASP Dependency Check Report
           path: ${{github.workspace}}/reports
       - name: Add coverage report to PR
         uses: madrapps/jacoco-report@v1.6.1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         with:
           paths: ${{github.workspace}}/search/target/site/jacoco/jacoco.xml
           token: ${{secrets.GITHUB_TOKEN}}
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Search Coverage Report'
-          update-comment: falsetrue
+          update-comment: false
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -120,30 +163,73 @@ jobs:
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
         run: mvn clean install -pl promotion -am
       - name: Run Maven Checkstyle
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         run: mvn checkstyle:checkstyle -pl promotion -am -Dcheckstyle.output.file=promotion-checkstyle-result.xml
       - name: Upload Checkstyle Result
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/promotion-checkstyle-result.xml'
       - name: Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Promotion-Service-Unit-Test-Results
           path: "promotion/**/*-reports/TEST*.xml"
           reporter: java-junit
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        id: sonar
+        
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f promotion
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl promotion -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=promotion/target/site/jacoco/jacoco.xml
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
       - name: OWASP Dependency Check
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: dependency-check/Dependency-Check_Action@main
         env:
           JAVA_HOME: /opt/jdk
@@ -152,21 +238,21 @@ jobs:
           path: '.'
           format: 'HTML'
       - name: Upload OWASP Dependency Check results
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: actions/upload-artifact@master
         with:
           name: OWASP Dependency Check Report
           path: ${{github.workspace}}/reports
       - name: Add coverage report to PR
         uses: madrapps/jacoco-report@v1.6.1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         with:
           paths: ${{github.workspace}}/promotion/target/site/jacoco/jacoco.xml
           token: ${{secrets.GITHUB_TOKEN}}
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Promotion Coverage Report'
-          update-comment: falsetrue
+          update-comment: false
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -212,30 +298,72 @@ jobs:
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
         run: mvn clean install -pl customer -am
       - name: Run Maven Checkstyle
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         run: mvn checkstyle:checkstyle -pl customer -am -Dcheckstyle.output.file=customer-checkstyle-result.xml
       - name: Upload Checkstyle Result
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/customer-checkstyle-result.xml'
       - name: Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Customer-Service-Unit-Test-Results
           path: "customer/**/*-reports/TEST*.xml"
           reporter: java-junit
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        id: sonar
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f customer
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl customer -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=customer/target/site/jacoco/jacoco.xml
+
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
       - name: OWASP Dependency Check
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: dependency-check/Dependency-Check_Action@main
         env:
           JAVA_HOME: /opt/jdk
@@ -244,21 +372,21 @@ jobs:
           path: '.'
           format: 'HTML'
       - name: Upload OWASP Dependency Check results
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: actions/upload-artifact@master
         with:
           name: OWASP Dependency Check Report
           path: ${{github.workspace}}/reports
       - name: Add coverage report to PR
         uses: madrapps/jacoco-report@v1.6.1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         with:
           paths: ${{github.workspace}}/customer/target/site/jacoco/jacoco.xml
           token: ${{secrets.GITHUB_TOKEN}}
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Customer Coverage Report'
-          update-comment: falsetrue
+          update-comment: false
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -304,25 +432,28 @@ jobs:
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
         run: mvn clean install -pl inventory -am
       - name: Run Maven Checkstyle
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         run: mvn checkstyle:checkstyle -pl inventory -am -Dcheckstyle.output.file=inventory-checkstyle-result.xml
       - name: Upload Checkstyle Result
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/inventory-checkstyle-result.xml'
       - name: Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Inventory-Service-Test-Results
           path: "inventory/**/*-reports/TEST*.xml"
           reporter: java-junit
       - name: OWASP Dependency Check
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         uses: dependency-check/Dependency-Check_Action@main
         env:
           JAVA_HOME: /opt/jdk
@@ -331,26 +462,62 @@ jobs:
           path: '.'
           format: 'HTML'
       - name: Upload OWASP Dependency Check results
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         uses: actions/upload-artifact@master
         with:
           name: OWASP Dependency Check Report
           path: ${{github.workspace}}/reports
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        id: sonar
+        
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f inventory
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl inventory -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=inventory/target/site/jacoco/jacoco.xml
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
       - name: Add coverage report to PR
         uses: madrapps/jacoco-report@v1.6.1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+
         with:
           paths: ${{github.workspace}}/inventory/target/site/jacoco/jacoco.xml
           token: ${{secrets.GITHUB_TOKEN}}
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Inventory Coverage Report'
-          update-comment: falsetrue
+          update-comment: false
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -396,30 +563,73 @@ jobs:
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
         run: mvn clean install -pl webhook -am
       - name: Run Maven Checkstyle
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         run: mvn checkstyle:checkstyle -pl webhook -am -Dcheckstyle.output.file=webhook-checkstyle-result.xml
       - name: Upload Checkstyle Result
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/webhook-checkstyle-result.xml'
       - name: Unit Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Webhook-Service-Unit-Test-Results
           path: "webhook/**/*-reports/TEST*.xml"
           reporter: java-junit
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        id: sonar
+        
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f webhook
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl webhook -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=webhook/target/site/jacoco/jacoco.xml
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
       - name: OWASP Dependency Check
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: dependency-check/Dependency-Check_Action@main
         env:
           JAVA_HOME: /opt/jdk
@@ -428,21 +638,21 @@ jobs:
           path: '.'
           format: 'HTML'
       - name: Upload OWASP Dependency Check results
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: actions/upload-artifact@master
         with:
           name: OWASP Dependency Check Report
           path: ${{github.workspace}}/reports
       - name: Add coverage report to PR
         uses: madrapps/jacoco-report@v1.6.1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         with:
           paths: ${{github.workspace}}/webhook/target/site/jacoco/jacoco.xml
           token: ${{secrets.GITHUB_TOKEN}}
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Webhook Coverage Report'
-          update-comment: falsetrue
+          update-comment: false
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -488,30 +698,71 @@ jobs:
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
         run: mvn clean install -pl order -am
       - name: Run Maven Checkstyle
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         run: mvn checkstyle:checkstyle -pl order -am -Dcheckstyle.output.file=order-checkstyle-result.xml
       - name: Upload Checkstyle Result
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/order-checkstyle-result.xml'
       - name: Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Order-Service-Unit-Test-Results
           path: "order/**/*-reports/TEST*.xml"
           reporter: java-junit
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        id: sonar
+        
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f order
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl order -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=order/target/site/jacoco/jacoco.xml
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
       - name: OWASP Dependency Check
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         uses: dependency-check/Dependency-Check_Action@main
         env:
           JAVA_HOME: /opt/jdk
@@ -520,21 +771,21 @@ jobs:
           path: '.'
           format: 'HTML'
       - name: Upload OWASP Dependency Check results
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: actions/upload-artifact@master
         with:
           name: OWASP Dependency Check Report
           path: ${{github.workspace}}/reports
       - name: Add coverage report to PR
         uses: madrapps/jacoco-report@v1.6.1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         with:
           paths: ${{github.workspace}}/order/target/site/jacoco/jacoco.xml
           token: ${{secrets.GITHUB_TOKEN}}
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Order Coverage Report'
-          update-comment: falsetrue
+          update-comment: false
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -580,30 +831,73 @@ jobs:
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
         run: mvn clean install -pl tax -am
       - name: Run Maven Checkstyle
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         run: mvn checkstyle:checkstyle -pl tax -am -Dcheckstyle.output.file=tax-checkstyle-result.xml
       - name: Upload Checkstyle Result
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/tax-checkstyle-result.xml'
       - name: Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Tax-Service-Unit-Test-Results
           path: "tax/**/*-reports/TEST*.xml"
           reporter: java-junit
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        id: sonar
+        
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f tax
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl tax -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=tax/target/site/jacoco/jacoco.xml
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
       - name: OWASP Dependency Check
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: dependency-check/Dependency-Check_Action@main
         env:
           JAVA_HOME: /opt/jdk
@@ -612,21 +906,21 @@ jobs:
           path: '.'
           format: 'HTML'
       - name: Upload OWASP Dependency Check results
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: actions/upload-artifact@master
         with:
           name: OWASP Dependency Check Report
           path: ${{github.workspace}}/reports
       - name: Add coverage report to PR
         uses: madrapps/jacoco-report@v1.6.1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         with:
           paths: ${{github.workspace}}/tax/target/site/jacoco/jacoco.xml
           token: ${{secrets.GITHUB_TOKEN}}
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Tax Coverage Report'
-          update-comment: falsetrue
+          update-comment: false
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -672,23 +966,73 @@ jobs:
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
         run: mvn clean install -pl sampledata -am
       - name: Run Maven Checkstyle
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         run: mvn checkstyle:checkstyle -pl sampledata -am -Dcheckstyle.output.file=sampledata-checkstyle-result.xml
       - name: Upload Checkstyle Result
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/sampledata-checkstyle-result.xml'
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        id: sonar
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f sampledata
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl sampledata -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=sampledata/target/site/jacoco/jacoco.xml
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
       - name: OWASP Dependency Check
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: dependency-check/Dependency-Check_Action@main
         env:
           JAVA_HOME: /opt/jdk
@@ -697,7 +1041,7 @@ jobs:
           path: '.'
           format: 'HTML'
       - name: Upload OWASP Dependency Check results
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: actions/upload-artifact@master
         with:
           name: OWASP Dependency Check Report
@@ -770,7 +1114,7 @@ name: media service ci
 
 on:
   push:
-    branches: ["**"]
+    branches: [ "**" ]
     paths:
       - "media/**"
       - ".github/workflows/actions/action.yaml"
@@ -795,22 +1139,92 @@ jobs:
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
-        run: mvn clean install -DskipTests -f media
-      - name: Run Maven Test
-        run: mvn test -f media
+        run: mvn clean install -DskipTests -pl media -am -f pom.xml
+      - name: Run Maven Verify
+        run: mvn verify -DskipITs -pl media -am -f pom.xml
       - name: Unit Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Unit-Test-Results
           path: "media/**/surefire-reports/*.xml"
           reporter: java-junit
+      - name: Enforce coverage threshold (>=70%)
+        run: |
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          report_path = Path("media/target/site/jacoco/jacoco.xml")
+          if not report_path.exists():
+              raise SystemExit("JaCoCo report not found at media/target/site/jacoco/jacoco.xml")
+          root = ET.parse(report_path).getroot()
+          line_counter = next((c for c in root.findall("counter") if c.attrib.get("type") == "LINE"), None)
+          if line_counter is None:
+              raise SystemExit("No LINE counter in JaCoCo report")
+          missed = int(line_counter.attrib["missed"])
+          covered = int(line_counter.attrib["covered"])
+          total = missed + covered
+          coverage = (covered / total * 100.0) if total else 0.0
+          print(f"Line coverage: {covered}/{total} = {coverage:.2f}%")
+          if coverage < 70.0:
+              raise SystemExit(f"Coverage gate failed: {coverage:.2f}% < 70.00%")
+          PY
+      - name: Upload JaCoCo report artifacts
+        uses: actions/upload-artifact@v4
+        if: ${{ success() || failure() }}
+        with:
+          name: media-jacoco-report
+          path: |
+            media/target/site/jacoco/index.html
+            media/target/site/jacoco/jacoco.xml
+            media/target/site/jacoco/jacoco.csv
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        id: sonar
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f media
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl media -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=media/target/site/jacoco/jacoco.xml
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -857,30 +1271,73 @@ jobs:
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
         run: mvn clean install -pl payment -am
       - name: Run Maven Checkstyle
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         run: mvn checkstyle:checkstyle -pl payment -am -Dcheckstyle.output.file=payment-checkstyle-result.xml
       - name: Upload Checkstyle Result
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/payment-checkstyle-result.xml'
       - name: Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Payment-Service-Unit-Test-Results
           path: "payment/**/*-reports/TEST*.xml"
           reporter: java-junit
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        id: sonar
+        
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f payment
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl payment -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=payment/target/site/jacoco/jacoco.xml
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
       - name: OWASP Dependency Check
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: dependency-check/Dependency-Check_Action@main
         env:
           JAVA_HOME: /opt/jdk
@@ -889,21 +1346,21 @@ jobs:
           path: '.'
           format: 'HTML'
       - name: Upload OWASP Dependency Check results
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: actions/upload-artifact@master
         with:
           name: OWASP Dependency Check Report
           path: ${{github.workspace}}/reports
       - name: Add coverage report to PR
         uses: madrapps/jacoco-report@v1.6.1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         with:
           paths: ${{github.workspace}}/payment/target/site/jacoco/jacoco.xml
           token: ${{secrets.GITHUB_TOKEN}}
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Payment Coverage Report'
-          update-comment: falsetrue
+          update-comment: false
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -961,20 +1418,51 @@ jobs:
         continue-on-error: true
         working-directory: backoffice
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           scan-type: 'fs'
           scan-ref: './backoffice'
           format: 'sarif'
           output: 'trivy-results.sarif'
       - name: SonarCloud Scan
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         uses: SonarSource/sonarcloud-github-action@master
         with:
           projectBaseDir: backoffice
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -990,7 +1478,7 @@ jobs:
           tags: ghcr.io/nashtech-garage/yas-backoffice:latest
       - name: Run Trivy vulnerability scanner
         if: ${{ github.ref == 'refs/heads/main' }}
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           image-ref: 'ghcr.io/nashtech-garage/yas-backoffice:latest'
           format: 'sarif'
@@ -1008,6 +1496,69 @@ jobs:
           sarif_file: 'trivy-results.sarif'
 
 
+======snyk-security.yaml content ======:
+name: Snyk security scan
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 1"
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  snyk:
+    runs-on: ubuntu-latest
+    env:
+      FROM_ORIGINAL_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name == github.repository || github.ref == 'refs/heads/main' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Snyk CLI
+        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        uses: snyk/actions/setup@master
+
+      - name: Snyk Open Source scan
+        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk test --all-projects --detection-depth=4 --severity-threshold=high --fail-on=upgradable
+
+      - name: Snyk Code scan (SARIF)
+        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk code test --severity-threshold=high --sarif-file-output=snyk-code.sarif
+
+      - name: Upload Snyk SARIF
+        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && always() && hashFiles('snyk-code.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk-code.sarif
+
+      - name: Skip Snyk for forks
+        if: ${{ env.FROM_ORIGINAL_REPOSITORY != 'true' }}
+        run: echo "Snyk scan is skipped for fork PRs because secrets are not available."
+
+
 ======cart-ci.yaml content ======:
 name: cart service ci
 
@@ -1019,44 +1570,95 @@ on:
       - ".github/workflows/actions/action.yaml"
       - ".github/workflows/cart-ci.yaml"
       - "pom.xml"
+
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
     paths:
       - "cart/**"
       - ".github/workflows/actions/action.yaml"
       - ".github/workflows/cart-ci.yaml"
       - "pom.xml"
+
   workflow_dispatch:
 
 jobs:
   Build:
     runs-on: ubuntu-latest
+
     env:
       FROM_ORIGINAL_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name == github.repository || github.ref == 'refs/heads/main' }}
+
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+          fetch-depth: 0
+
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
+
       - name: Run Maven Build Command
-        run: mvn clean install -pl cart -am
+        run: mvn clean install -DskipTests -pl cart -am -f pom.xml
+
+      - name: Run Maven Verify
+        run: mvn verify -DskipITs -pl cart -am -f pom.xml
+
       - name: Run Maven Checkstyle
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
-        run: mvn checkstyle:checkstyle -pl cart -am -Dcheckstyle.output.file=cart-checkstyle-result.xml
+        run: mvn checkstyle:checkstyle -pl cart -am -f pom.xml -Dcheckstyle.output.file=cart-checkstyle-result.xml
+
       - name: Upload Checkstyle Result
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/cart-checkstyle-result.xml'
+
       - name: Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Cart-Service-Unit-Test-Results
           path: "cart/**/*-reports/TEST*.xml"
           reporter: java-junit
+
+      - name: Enforce coverage threshold (>=70%)
+        run: |
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          report_path = Path("cart/target/site/jacoco/jacoco.xml")
+          if not report_path.exists():
+              raise SystemExit("JaCoCo report not found")
+
+          root = ET.parse(report_path).getroot()
+          line_counter = next((c for c in root.findall("counter") if c.attrib.get("type") == "LINE"), None)
+
+          missed = int(line_counter.attrib["missed"])
+          covered = int(line_counter.attrib["covered"])
+          total = missed + covered
+          coverage = (covered / total * 100.0) if total else 0.0
+
+          print(f"Line coverage: {coverage:.2f}%")
+
+          if coverage < 70:
+              raise SystemExit("Coverage gate failed")
+          PY
+
+      - name: Upload JaCoCo report artifacts
+        uses: actions/upload-artifact@v4
+        if: ${{ success() || failure() }}
+        with:
+          name: cart-jacoco-report
+          path: |
+            cart/target/site/jacoco/index.html
+            cart/target/site/jacoco/jacoco.xml
+            cart/target/site/jacoco/jacoco.csv
+
       - name: OWASP Dependency Check
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        continue-on-error: true
         uses: dependency-check/Dependency-Check_Action@main
         env:
           JAVA_HOME: /opt/jdk
@@ -1064,34 +1666,75 @@ jobs:
           project: 'yas'
           path: '.'
           format: 'HTML'
+
       - name: Upload OWASP Dependency Check results
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v4
         with:
           name: OWASP Dependency Check Report
-          path: ${{github.workspace}}/reports
-      - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+          path: ${{ github.workspace }}/reports
+
+      - name: Analyze with SonarCloud
+        id: sonar
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -pl cart -am
+        run: |
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+            -pl cart -am -f pom.xml \
+            -Dsonar.coverage.jacoco.xmlReportPaths=cart/target/site/jacoco/jacoco.xml \
+            -Dsonar.qualitygate.wait=true
+
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
+
       - name: Add coverage report to PR
         uses: madrapps/jacoco-report@v1.6.1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         with:
-          paths: ${{github.workspace}}/cart/target/site/jacoco/jacoco.xml
-          token: ${{secrets.GITHUB_TOKEN}}
+          paths: ${{ github.workspace }}/cart/target/site/jacoco/jacoco.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Cart Coverage Report'
-          update-comment: falsetrue
-      - name: Log in to the Container registry
+          update-comment: false
+
+      - name: Log in to Container Registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and push Docker images
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/build-push-action@v6
@@ -1101,23 +1744,32 @@ jobs:
           tags: ghcr.io/nashtech-garage/yas-cart:latest
 
 ======gitleaks-check.yaml content ======:
-name: GitLeaks check nightly
+name: Gitleaks check
+
 on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "main" ]
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "0 2 * * *"
+
 jobs:
-  check:
+  gitleaks:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout 
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
-    - name: Gitleaks check
-      run: |
-        docker pull zricethezav/gitleaks:v8.18.4
-        docker run --rm -v ${{ github.workspace }}:/work -w /work zricethezav/gitleaks:v8.18.4 detect --source="." --config="/work/gitleaks.toml" --verbose --no-git
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Scan full git history to catch leaked secrets in old commits.
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: gitleaks.toml
 
 ======recommendation-ci.yaml content ======:
 name: recommendation service ci
@@ -1149,30 +1801,73 @@ jobs:
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
         run: mvn clean install -pl recommendation -am
       - name: Run Maven Checkstyle
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         run: mvn checkstyle:checkstyle -pl recommendation -am -Dcheckstyle.output.file=recommendation-checkstyle-result.xml
       - name: Upload Checkstyle Result
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/recommendation-checkstyle-result.xml'
       - name: Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Recommendation-Service-Unit-Test-Results
           path: "recommendation/**/*-reports/TEST*.xml"
           reporter: java-junit
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        id: sonar
+        
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f recommendation
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl recommendation -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=recommendation/target/site/jacoco/jacoco.xml
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
       - name: OWASP Dependency Check
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: dependency-check/Dependency-Check_Action@main
         env:
           JAVA_HOME: /opt/jdk
@@ -1181,21 +1876,21 @@ jobs:
           path: '.'
           format: 'HTML'
       - name: Upload OWASP Dependency Check results
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: actions/upload-artifact@master
         with:
           name: OWASP Dependency Check Report
           path: ${{github.workspace}}/reports
       - name: Add coverage report to PR
         uses: madrapps/jacoco-report@v1.6.1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         with:
           paths: ${{github.workspace}}/recommendation/target/site/jacoco/jacoco.xml
           token: ${{secrets.GITHUB_TOKEN}}
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Recommendation Coverage Report'
-          update-comment: falsetrue
+          update-comment: false
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -1348,6 +2043,45 @@ jobs:
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
+======test-summary.yaml content ======:
+name: summary test
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+  workflow_dispatch:
+
+jobs:
+  demo-summary:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fake build
+        run: echo "Building project..."
+
+      - name: Write Summary
+        run: |
+          echo "## CI Summary Test 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Build: Success ✅" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Runner: ubuntu-latest" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | Passed ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests | Passed ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| Deploy | Skipped ⏭️ |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Done
+        run: echo "Finished."
+
 ======payment-paypal-ci.yaml content ======:
 name: payment-paypal service ci
 
@@ -1378,30 +2112,72 @@ jobs:
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
         run: mvn clean install -pl payment-paypal -am
       - name: Run Maven Checkstyle
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         run: mvn checkstyle:checkstyle -pl payment-paypal -am -Dcheckstyle.output.file=payment-paypal-checkstyle-result.xml
       - name: Upload Checkstyle Result
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/payment-paypal-checkstyle-result.xml'
       - name: Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Payment-Paypal-Unit-Test-Results
           path: "payment-paypal/**/*-reports/TEST*.xml"
           reporter: java-junit
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        id: sonar
+        
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f payment-paypal
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl payment-paypal -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=payment-paypal/target/site/jacoco/jacoco.xml
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
       - name: OWASP Dependency Check
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: dependency-check/Dependency-Check_Action@main
         env:
           JAVA_HOME: /opt/jdk
@@ -1410,21 +2186,20 @@ jobs:
           path: '.'
           format: 'HTML'
       - name: Upload OWASP Dependency Check results
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: actions/upload-artifact@master
         with:
           name: OWASP Dependency Check Report
           path: ${{github.workspace}}/reports
       - name: Add coverage report to PR
         uses: madrapps/jacoco-report@v1.6.1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         with:
           paths: ${{github.workspace}}/payment-paypal/target/site/jacoco/jacoco.xml
           token: ${{secrets.GITHUB_TOKEN}}
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Payment Paypal Coverage Report'
-          update-comment: falsetrue
+          update-comment: false
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -1470,23 +2245,67 @@ jobs:
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
         run: mvn clean install -pl storefront-bff -am
       - name: Run Maven Checkstyle
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         run: mvn checkstyle:checkstyle -pl storefront-bff -am -Dcheckstyle.output.file=storefront-bff-checkstyle-result.xml
       - name: Upload Checkstyle Result
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/storefront-bff-checkstyle-result.xml'
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        id: sonar
+        
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f storefront-bff
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl storefront-bff -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=storefront-bff/target/site/jacoco/jacoco.xml
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
       - name: OWASP Dependency Check
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: dependency-check/Dependency-Check_Action@main
         env:
           JAVA_HOME: /opt/jdk
@@ -1495,21 +2314,21 @@ jobs:
           path: '.'
           format: 'HTML'
       - name: Upload OWASP Dependency Check results
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: actions/upload-artifact@master
         with:
           name: OWASP Dependency Check Report
           path: ${{github.workspace}}/reports
       - name: Add coverage report to PR
         uses: madrapps/jacoco-report@v1.6.1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         with:
           paths: ${{github.workspace}}/storefront-bff/target/site/jacoco/jacoco.xml
           token: ${{secrets.GITHUB_TOKEN}}
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Storefront BFF Coverage Report'
-          update-comment: falsetrue
+          update-comment: false
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -1555,30 +2374,72 @@ jobs:
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
         run: mvn clean install -pl location -am
       - name: Run Maven Checkstyle
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         run: mvn checkstyle:checkstyle -pl location -am -Dcheckstyle.output.file=location-checkstyle-result.xml
       - name: Upload Checkstyle Result
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/location-checkstyle-result.xml'
       - name: Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Location-Service-Unit-Test-Results
           path: "location/**/*-reports/TEST*.xml"
           reporter: java-junit
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        id: sonar
+        
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f location
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl location -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=location/target/site/jacoco/jacoco.xml
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
       - name: OWASP Dependency Check
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: dependency-check/Dependency-Check_Action@main
         env:
           JAVA_HOME: /opt/jdk
@@ -1587,21 +2448,21 @@ jobs:
           path: '.'
           format: 'HTML'
       - name: Upload OWASP Dependency Check results
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: actions/upload-artifact@master
         with:
           name: OWASP Dependency Check Report
           path: ${{github.workspace}}/reports
       - name: Add coverage report to PR
         uses: madrapps/jacoco-report@v1.6.1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         with:
           paths: ${{github.workspace}}/location/target/site/jacoco/jacoco.xml
           token: ${{secrets.GITHUB_TOKEN}}
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Location Coverage Report'
-          update-comment: falsetrue
+          update-comment: false
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -1622,7 +2483,7 @@ name: backoffice-bff service ci
 
 on:
   push:
-    branches: ["**"]
+    branches: [ "**" ]
     paths:
       - "backoffice-bff/**"
       - ".github/workflows/actions/action.yaml"
@@ -1647,22 +2508,64 @@ jobs:
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
         run: mvn clean install -DskipTests -f backoffice-bff
       - name: Run Maven Test
         run: mvn test -f backoffice-bff
       - name: Unit Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Unit-Test-Results
           path: "backoffice-bff/**/surefire-reports/*.xml"
           reporter: java-junit
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        id: sonar
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f backoffice-bff
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl backoffice-bff -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=backoffice-bff/target/site/jacoco/jacoco.xml
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -1709,30 +2612,73 @@ jobs:
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
         run: mvn clean install -pl rating -am
       - name: Run Maven Checkstyle
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         run: mvn checkstyle:checkstyle -pl rating -am -Dcheckstyle.output.file=rating-checkstyle-result.xml
       - name: Upload Checkstyle Result
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/rating-checkstyle-result.xml'
       - name: Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Rating-Service-Unit-Test-Results
           path: "rating/**/*-reports/TEST*.xml"
           reporter: java-junit
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        id: sonar
+        
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f rating
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl rating -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=rating/target/site/jacoco/jacoco.xml
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
       - name: OWASP Dependency Check
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: dependency-check/Dependency-Check_Action@main
         env:
           JAVA_HOME: /opt/jdk
@@ -1741,21 +2687,21 @@ jobs:
           path: '.'
           format: 'HTML'
       - name: Upload OWASP Dependency Check results
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         uses: actions/upload-artifact@master
         with:
           name: OWASP Dependency Check Report
           path: ${{github.workspace}}/reports
       - name: Add coverage report to PR
         uses: madrapps/jacoco-report@v1.6.1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        
         with:
           paths: ${{github.workspace}}/rating/target/site/jacoco/jacoco.xml
           token: ${{secrets.GITHUB_TOKEN}}
           min-coverage-overall: 80
           min-coverage-changed-files: 60
           title: 'Rating Coverage Report'
-          update-comment: falsetrue
+          update-comment: false
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -1776,19 +2722,17 @@ name: storefront service ci
 
 on:
   push:
-    branches: ["**"]
+    branches: [ "main" ]
     paths:
       - "storefront/**"
       - ".github/workflows/actions/action.yaml"
       - ".github/workflows/storefront-ci.yaml"
-      - "pom.xml"
   pull_request:
     branches: [ "main" ]
     paths:
       - "storefront/**"
       - ".github/workflows/actions/action.yaml"
       - ".github/workflows/storefront-ci.yaml"
-      - "pom.xml"
   workflow_dispatch:
 
 jobs:
@@ -1800,23 +2744,56 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-      - uses: ./.github/workflows/actions
-      - name: Run Maven Build Command
-        run: mvn clean install -DskipTests -f storefront
-      - name: Run Maven Test
-        run: mvn test -f storefront
-      - name: Unit Test Results
-        uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
+      - uses: actions/setup-node@v4
         with:
-          name: Unit-Test-Results
-          path: "storefront/**/surefire-reports/*.xml"
-          reporter: java-junit
-      - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+          node-version: 20
+      - run: npm ci
+        working-directory: storefront
+      - run: npm run build
+        working-directory: storefront
+      - run: npm run lint
+        working-directory: storefront
+      - run: npx prettier --check .
+        working-directory: storefront
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v5
+        with:
+          projectBaseDir: storefront
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f storefront
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -1832,13 +2809,12 @@ jobs:
           push: true
           tags: ghcr.io/nashtech-garage/yas-storefront:latest
 
-
 ======pricing-ci.yaml content ======:
 name: pricing service ci
 
 on:
   push:
-    branches: ["**"]
+    branches: [ "**" ]
     paths:
       - "pricing/**"
       - ".github/workflows/actions/action.yaml"
@@ -1863,22 +2839,65 @@ jobs:
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
         run: mvn clean install -DskipTests -f pricing
       - name: Run Maven Test
         run: mvn test -f pricing
       - name: Unit Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Unit-Test-Results
           path: "pricing/**/surefire-reports/*.xml"
           reporter: java-junit
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        id: sonar
+        
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f pricing
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl pricing -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=pricing/target/site/jacoco/jacoco.xml
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -1900,7 +2919,7 @@ name: product service ci
 
 on:
   push:
-    branches: ["**"]
+    branches: [ "**" ]
     paths:
       - "product/**"
       - ".github/workflows/actions/action.yaml"
@@ -1925,22 +2944,94 @@ jobs:
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
-        run: mvn clean install -DskipTests -f product
-      - name: Run Maven Test
-        run: mvn test -f product
+        run: mvn clean install -DskipTests -pl product -am -f pom.xml
+      - name: Run Maven Verify
+        run: mvn verify -pl product -am -f pom.xml
       - name: Unit Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Unit-Test-Results
           path: "product/**/surefire-reports/*.xml"
           reporter: java-junit
+      - name: Enforce coverage threshold (>=70%)
+        run: |
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          report_path = Path("product/target/site/jacoco/jacoco.xml")
+          if not report_path.exists():
+              raise SystemExit("JaCoCo report not found at product/target/site/jacoco/jacoco.xml")
+          root = ET.parse(report_path).getroot()
+          line_counter = next((c for c in root.findall("counter") if c.attrib.get("type") == "LINE"), None)
+          if line_counter is None:
+              raise SystemExit("No LINE counter in JaCoCo report")
+          missed = int(line_counter.attrib["missed"])
+          covered = int(line_counter.attrib["covered"])
+          total = missed + covered
+          coverage = (covered / total * 100.0) if total else 0.0
+          print(f"Line coverage: {covered}/{total} = {coverage:.2f}%")
+          if coverage < 70.0:
+              raise SystemExit(f"Coverage gate failed: {coverage:.2f}% < 70.00%")
+          PY
+      - name: Upload JaCoCo report artifacts
+        uses: actions/upload-artifact@v4
+        if: ${{ success() || failure() }}
+        with:
+          name: product-jacoco-report
+          path: |
+            product/target/site/jacoco/index.html
+            product/target/site/jacoco/jacoco.xml
+            product/target/site/jacoco/jacoco.csv
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        id: sonar
+        
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f product
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl product -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=product/target/site/jacoco/jacoco.xml
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
+
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
