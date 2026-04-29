@@ -4,7 +4,7 @@ import os
 target_folders = [
     "search", "promotion", "customer", "inventory", "webhook", 
     "order", "tax", "sampledata", "media", "payment", 
-    "backoffice", "cart", "recommendation"
+    "backoffice", "cart", "recommendation","backoffice-bff","storefront","storefront-bff"
 ]
 
 file_name = "change_trig.txt"
