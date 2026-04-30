@@ -1,4 +1,4 @@
-name: payment service ci
+name: backoffice service ci
 
 on:
   push:
@@ -7,56 +7,83 @@ on:
       - "backoffice/**"
       - ".github/workflows/actions/action.yaml"
       - ".github/workflows/backoffice-ci.yaml"
-      - "package.json"
   pull_request:
-    branches: ["main"]
+    branches: [ "main" ]
     paths:
       - "backoffice/**"
       - ".github/workflows/actions/action.yaml"
       - ".github/workflows/backoffice-ci.yaml"
-      - "package.json"
   workflow_dispatch:
 
 jobs:
   Build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./payment
+    env:
+      FROM_ORIGINAL_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name == github.repository || github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: './payment/package-lock.json'
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Run Build
-        run: npm run build --if-present
-
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-assets-payment
-          path: payment/dist/ # Hoặc folder build tùy dự án của bạn
-          retention-days: 1
-
-      - name: Run ESLint
-        run: npm run lint -- --format checkstyle --output-file ../payment-lint-result.xml
+          node-version: 20
+      - run: npm ci
+        working-directory: backoffice
+      - run: npm run build
+        working-directory: backoffice
+      - run: npm run lint
+        working-directory: backoffice
+      - run: npx prettier --check .
+        working-directory: backoffice
+      - run: npm audit --omit=dev
         continue-on-error: true
-
-      - name: Upload Lint Result
-        uses: jwgmeligmeyling/checkstyle-github-action@master
+        working-directory: backoffice
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
-          path: 'payment-lint-result.xml'
+          scan-type: 'fs'
+          scan-ref: './backoffice'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        with:
+          projectBaseDir: backoffice
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+            ICON="🟢"
+            STATUS="PASS"
+          else
+            ICON="🔴"
+            STATUS="FAIL"
+          fi
 
+          {
+            echo "## SonarCloud Report"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
+            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
+            echo "| Service | \`${SERVICE_NAME}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Actor | \`${{ github.actor }}\` |"
+            echo ""
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+            echo ""
+            echo "### Notes"
+            echo "- If status = FAIL, open Sonar step logs."
+            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
+            echo "- If using continue-on-error, workflow still continues."
+          } >> $GITHUB_STEP_SUMMARY
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -64,120 +91,27 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push Docker images
+      - name: Build Docker image
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/build-push-action@v6
         with:
-          context: ./payment
+          context: ./backoffice
+          tags: ghcr.io/nashtech-garage/yas-backoffice:latest
+      - name: Run Trivy vulnerability scanner
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: aquasecurity/trivy-action@v0.28.0
+        with:
+          image-ref: 'ghcr.io/nashtech-garage/yas-backoffice:latest'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      - name: Push Docker image
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: docker/build-push-action@v6
+        with:
           push: true
-          tags: ghcr.io/nashtech-garage/yas-payment:latest
-
-  Test:
-    needs: Build
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./payment
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+          context: ./backoffice
+          tags: ghcr.io/nashtech-garage/yas-backoffice:latest
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
         with:
-          node-version: '20'
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Run Unit Tests & Coverage
-        # Giả định dùng Jest/Vitest xuất ra junit.xml và lcov.info
-        run: npm test -- --coverage --reporters=default --reporters=jest-junit
-        env:
-          JEST_JUNIT_OUTPUT_DIR: "./test-results"
-          JEST_JUNIT_OUTPUT_NAME: "junit.xml"
-
-      - name: Test Results Summary (Tab)
-        uses: dorny/test-reporter@v1
-        if: always()
-        with:
-          name: Payment-Unit-Test-Results
-          path: "payment/test-results/junit.xml"
-          reporter: jest-junit
-
-      - name: Write Test Summary to Job
-        if: always()
-        run: |
-          echo "## 🧪 Test Result: payment" >> $GITHUB_STEP_SUMMARY
-          # Logic parse nhanh file junit.xml cho npm
-          if [ ! -f "test-results/junit.xml" ]; then
-            echo "❌ Không tìm thấy file kết quả test." >> $GITHUB_STEP_SUMMARY
-          else
-            # Extract basic info from junit xml
-            TESTS=$(grep -oE 'tests="[0-9]+"' test-results/junit.xml | head -1 | cut -d'"' -f2)
-            FAILURES=$(grep -oE 'failures="[0-9]+"' test-results/junit.xml | head -1 | cut -d'"' -f2)
-            echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
-            echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
-            echo "| ✅ Passed | $((TESTS - FAILURES)) |" >> $GITHUB_STEP_SUMMARY
-            echo "| ❌ Failures | $FAILURES |" >> $GITHUB_STEP_SUMMARY
-            echo "| **Total** | **$TESTS** |" >> $GITHUB_STEP_SUMMARY
-          fi
-
-      - name: Upload Coverage Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report-payment
-          path: payment/coverage/lcov.info
-          retention-days: 1
-
-  SonarCloud:
-    needs: [Build, Test]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Download Coverage Report
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage-report-payment
-          path: payment/coverage/
-
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          projectBaseDir: payment
-          args: >
-            -Dsonar.projectKey=<YOUR_PROJECT_KEY>
-            -Dsonar.organization=<YOUR_ORG>
-            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
-            -Dsonar.sources=src
-            -Dsonar.tests=src
-            -Dsonar.test.inclusions=**/*.spec.ts,**/*.test.ts
-
-  Check-Coverage:
-    needs: Test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code 
-        uses: actions/checkout@v4
-
-      - name: Download Coverage Report
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage-report-payment
-          path: coverage
-
-      - name: Monitor Coverage
-        # Sử dụng action phù hợp cho Node/LCOV
-        uses: arturbalicchia/lcov-reporter-action@v0
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          lcov-file: ./coverage/lcov.info
-          filter-changed-files: true
-          min-coverage: 70
+          sarif_file: 'trivy-results.sarif'
