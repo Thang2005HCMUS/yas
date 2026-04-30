@@ -108,5 +108,4 @@ class OrderServiceTest {
         assertThat(result.paymentId()).isEqualTo(78910L);
         assertThat(result.paymentStatus()).isEqualTo("SUCCESS");
     }
-    
 }

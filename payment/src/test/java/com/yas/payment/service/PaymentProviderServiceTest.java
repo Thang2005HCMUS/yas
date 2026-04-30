@@ -1,133 +1,111 @@
 package com.yas.payment.service;
 
+import static com.yas.payment.util.SecurityContextUtils.setUpSecurityContext;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-import com.yas.commonlibrary.exception.NotFoundException;
-import com.yas.payment.mapper.CreatePaymentProviderMapper;
-import com.yas.payment.mapper.PaymentProviderMapper;
-import com.yas.payment.mapper.UpdatePaymentProviderMapper;
-import com.yas.payment.model.PaymentProvider;
-import com.yas.payment.repository.PaymentProviderRepository;
-import com.yas.payment.viewmodel.paymentprovider.CreatePaymentVm;
-import com.yas.payment.viewmodel.paymentprovider.MediaVm;
-import com.yas.payment.viewmodel.paymentprovider.PaymentProviderVm;
-import com.yas.payment.viewmodel.paymentprovider.UpdatePaymentVm;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-import org.jetbrains.annotations.NotNull;
+import com.yas.payment.config.ServiceUrlConfig;
+import com.yas.payment.model.CapturedPayment;
+import com.yas.payment.model.enumeration.PaymentMethod;
+import com.yas.payment.model.enumeration.PaymentStatus;
+import com.yas.payment.viewmodel.CapturePaymentResponseVm;
+import com.yas.payment.viewmodel.CheckoutStatusVm;
+import com.yas.payment.viewmodel.PaymentOrderStatusVm;
+import java.math.BigDecimal;
+import java.net.URI;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mapstruct.factory.Mappers;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
-import org.springframework.data.domain.Pageable;
+import org.mockito.Mockito;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
-class PaymentProviderServiceTest {
+class OrderServiceTest {
 
-    public static final String[] IGNORED_FIELDS = {"version", "iconUrl"};
+    private RestClient restClient;
 
-    @Mock
-    private MediaService mediaService;
+    private ServiceUrlConfig serviceUrlConfig;
 
-    @InjectMocks
-    private PaymentProviderService paymentProviderService;
+    private OrderService orderService;
 
-    @Mock
-    private PaymentProviderRepository paymentProviderRepository;
+    private RestClient.ResponseSpec responseSpec;
 
-    @Spy
-    private PaymentProviderMapper paymentProviderMapper = Mappers.getMapper(PaymentProviderMapper.class);
-    @Spy
-    private CreatePaymentProviderMapper createPaymentProviderMapper = Mappers.getMapper(CreatePaymentProviderMapper.class);
-    @Spy
-    private UpdatePaymentProviderMapper updatePaymentProviderMapper = Mappers.getMapper(UpdatePaymentProviderMapper.class);
-
-    private PaymentProvider paymentProvider;
-    private Pageable defaultPageable = Pageable.ofSize(10);
+    private static final String ORDER_URL = "http://api.yas.local/order";
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
-        paymentProvider = new PaymentProvider();
-        paymentProvider.setId("providerId");
-        paymentProvider.setAdditionalSettings("additional settings");
-        paymentProvider.setEnabled(true);
-        paymentProvider.setMediaId(100L);
+        restClient = mock(RestClient.class);
+        serviceUrlConfig = mock(ServiceUrlConfig.class);
+        orderService = new OrderService(restClient, serviceUrlConfig);
+        responseSpec = Mockito.mock(RestClient.ResponseSpec.class);
+        setUpSecurityContext("test");
+        when(serviceUrlConfig.order()).thenReturn(ORDER_URL);
     }
 
     @Test
-    void createPaymentProvider_Success() {
-        var randomVal = UUID.randomUUID().toString();
-        CreatePaymentVm createReq = getCreatePaymentVm(randomVal);
-        when(paymentProviderRepository.save(any())).thenReturn(getPaymentProvider(randomVal));
-        var result = paymentProviderService.create(createReq);
-        verify(paymentProviderRepository).save(any());
-        assertThat(result.getId()).isEqualTo(randomVal);
+    void testUpdateCheckoutStatus_whenNormalCase_returnLong() {
+
+        CapturedPayment capturedPayment = CapturedPayment.builder()
+            .orderId(12345L)
+            .checkoutId("checkout-1234")
+            .amount(new BigDecimal("99.99"))
+            .paymentFee(new BigDecimal("2.50"))
+            .gatewayTransactionId("txn-67890")
+            .paymentMethod(PaymentMethod.COD)
+            .paymentStatus(PaymentStatus.COMPLETED)
+            .failureMessage(null)
+            .build();
+
+        URI url = UriComponentsBuilder
+            .fromUriString(serviceUrlConfig.order())
+            .path("/storefront/checkouts/status")
+            .buildAndExpand()
+            .toUri();
+
+        RestClient.RequestBodyUriSpec requestBodyUriSpec = mock(RestClient.RequestBodyUriSpec.class);
+        when(restClient.put()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(url)).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.body(any(CheckoutStatusVm.class))).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.headers(any())).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(Long.class)).thenReturn(1L);
+
+        Long result = orderService.updateCheckoutStatus(capturedPayment);
+
+        assertThat(result).isEqualTo(1L);
+
     }
 
     @Test
-    void updatePaymentProvider_NotFound_ThrowsException() {
-        UpdatePaymentVm updateReq = new UpdatePaymentVm();
-        updateReq.setId("non-existent");
-        when(paymentProviderRepository.findById("non-existent")).thenReturn(Optional.empty());
-        assertThrows(NotFoundException.class, () -> paymentProviderService.update(updateReq)); 
-    }
+    void testUpdateOrderStatus_whenNormalCase_returnPaymentOrderStatusVm() {
 
-    // --- NEW TEST CASES TO INCREASE COVERAGE ---
 
-    @Test
-    void getEnabledPaymentProviders_WithMediaMapping_Success() {
-        // Given
-        List<PaymentProvider> providers = List.of(paymentProvider);
-        when(paymentProviderRepository.findByEnabledTrue(defaultPageable)).thenReturn(providers);
-        
-        MediaVm mediaVm = MediaVm.builder().id(100L).url("http://image.url/icon.png").build();
-        when(mediaService.getMediaVmMap(providers)).thenReturn(Map.of(100L, mediaVm)); 
+        PaymentOrderStatusVm statusVm = PaymentOrderStatusVm.builder()
+            .orderId(123456L)
+            .orderStatus("COMPLETED")
+            .paymentId(78910L)
+            .paymentStatus("SUCCESS")
+            .build();
 
-        // When
-        List<PaymentProviderVm> result = paymentProviderService.getEnabledPaymentProviders(defaultPageable);
+        URI url = UriComponentsBuilder
+            .fromUriString(serviceUrlConfig.order())
+            .path("/storefront/orders/status")
+            .buildAndExpand()
+            .toUri();
 
-        // Then
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getIconUrl()).isEqualTo("http://image.url/icon.png"); 
-        verify(mediaService).getMediaVmMap(any());
-    }
+        RestClient.RequestBodyUriSpec requestBodyUriSpec = mock(RestClient.RequestBodyUriSpec.class);
+        when(restClient.put()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(url)).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.body(statusVm)).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.headers(any())).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(PaymentOrderStatusVm.class)).thenReturn(statusVm);
 
-    @Test
-    void getEnabledPaymentProviders_WhenNoProvider_ReturnsEmptyList() {
-        when(paymentProviderRepository.findByEnabledTrue(defaultPageable)).thenReturn(List.of()); 
-        List<PaymentProviderVm> result = paymentProviderService.getEnabledPaymentProviders(defaultPageable);
-        assertThat(result).isEmpty(); 
-    }
-
-    @Test
-    void getAdditionalSettings_WhenProviderExists_ReturnsSettings() {
-        when(paymentProviderRepository.findById("providerId")).thenReturn(Optional.of(paymentProvider));
-        String settings = paymentProviderService.getAdditionalSettingsByPaymentProviderId("providerId");
-        assertThat(settings).isEqualTo("additional settings"); 
-    }
-
-    // --- HELPERS ---
-    private static CreatePaymentVm getCreatePaymentVm(String val) {
-        CreatePaymentVm vm = new CreatePaymentVm();
-        vm.setId(val);
-        vm.setName(val);
-        vm.setConfigureUrl(val);
-        return vm;
-    }
-
-    private static PaymentProvider getPaymentProvider(String val) {
-        PaymentProvider p = new PaymentProvider();
-        p.setId(val);
-        p.setName(val);
-        return p;
+        PaymentOrderStatusVm result = orderService.updateOrderStatus(statusVm);
+        assertThat(result.orderId()).isEqualTo(123456L);
+        assertThat(result.orderStatus()).isEqualTo("COMPLETED");
+        assertThat(result.paymentId()).isEqualTo(78910L);
+        assertThat(result.paymentStatus()).isEqualTo("SUCCESS");
     }
 }
