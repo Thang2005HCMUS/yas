@@ -3,7 +3,7 @@ import os
 # Danh sách các service Java cần tạo CI
 JAVA_SERVICES = [
     "search", "promotion", "customer", "inventory", "payment", "order", 
-    "tax", "rating", "location", "storefront-bff", "backoffice-bff", "payment"
+    "tax", "rating", "location", "storefront-bff", "backoffice-bff", "payment",
     "backoffice", "product", "media", "payment-paypal", "webhook", "sampledata", "cart", "recommendation"
 ]
 
