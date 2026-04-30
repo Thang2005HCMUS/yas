@@ -8,9 +8,6 @@ import org.mockito.Mockito;
 import javax.sql.DataSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 
 class SampleDataServiceTest {
@@ -28,13 +25,12 @@ class SampleDataServiceTest {
 
     @Test
     void createSampleData_ShouldReturnSuccessMessage() {
-        // Thực thi
+        // Execute
         SampleDataVm result = sampleDataService.createSampleData();
 
-        // Kiểm tra
+        // Verify
         assertEquals("Insert Sample Data successfully!", result.message());
-        // Vì SqlScriptExecutor được khởi tạo bằng 'new' trong code chính, 
-        // chúng ta khó mock sâu hơn nếu không dùng PowerMock, 
-        // nhưng logic service vẫn được bao phủ.
+        // Lưu ý: Vì SqlScriptExecutor được khởi tạo bằng 'new', 
+        // unit test này chủ yếu cover luồng trả về message.
     }
 }
