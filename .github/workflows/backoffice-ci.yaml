@@ -1,51 +1,61 @@
-name: backoffice service ci
+name: payment service ci
 
 on:
   push:
     branches: ["**"]
     paths:
-      - "backoffice/**"
+      - "payment/**"
       - ".github/workflows/actions/action.yaml"
-      - ".github/workflows/backoffice-ci.yaml"
-      - "pom.xml"
+      - ".github/workflows/payment-ci.yaml"
+      - "package.json"
   pull_request:
     branches: ["main"]
     paths:
-      - "backoffice/**"
+      - "payment/**"
       - ".github/workflows/actions/action.yaml"
-      - ".github/workflows/backoffice-ci.yaml"
-      - "pom.xml"
+      - ".github/workflows/payment-ci.yaml"
+      - "package.json"
   workflow_dispatch:
 
 jobs:
   Build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./payment
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: ./.github/workflows/actions
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './payment/package-lock.json'
 
-      - name: Run Maven Build Command
-        run: mvn clean install -pl backoffice -am -DskipTests
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Build
+        run: npm run build --if-present
+
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-assets-backoffice
-          path: |
-            **/target/*.jar
-            **/target/classes/
-            **/target/generated-sources/
+          name: build-assets-payment
+          path: payment/dist/ # Hoặc folder build tùy dự án của bạn
           retention-days: 1
 
-      - name: Run Maven Checkstyle
-        run: mvn checkstyle:checkstyle -pl backoffice -am -Dcheckstyle.output.file=backoffice-checkstyle-result.xml
+      - name: Run ESLint
+        run: npm run lint -- --format checkstyle --output-file ../payment-lint-result.xml
+        continue-on-error: true
 
-      - name: Upload Checkstyle Result
+      - name: Upload Lint Result
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
-          path: '**/backoffice-checkstyle-result.xml'
+          path: 'payment-lint-result.xml'
 
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
@@ -59,158 +69,115 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/build-push-action@v6
         with:
-          context: ./backoffice
+          context: ./payment
           push: true
-          tags: ghcr.io/nashtech-garage/yas-backoffice:latest
+          tags: ghcr.io/nashtech-garage/yas-payment:latest
 
   Test:
     needs: Build
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./payment
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/workflows/actions
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-      - name: Run Unit Tests & Generate JaCoCo Report
-        # Vì JaCoCo nằm trong pluginManagement, ta gọi trực tiếp goal để ép nó chạy
-        run: |
-          mvn clean verify \
-          org.jacoco:jacoco-maven-plugin:0.8.14:prepare-agent \
-          test \
-          org.jacoco:jacoco-maven-plugin:0.8.14:report \
-          -pl backoffice -am -DskipTests=false
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Unit Tests & Coverage
+        # Giả định dùng Jest/Vitest xuất ra junit.xml và lcov.info
+        run: npm test -- --coverage --reporters=default --reporters=jest-junit
+        env:
+          JEST_JUNIT_OUTPUT_DIR: "./test-results"
+          JEST_JUNIT_OUTPUT_NAME: "junit.xml"
 
       - name: Test Results Summary (Tab)
         uses: dorny/test-reporter@v1
         if: always()
         with:
-          name: Backoffice-Unit-Test-Results
-          path: "backoffice/**/*-reports/TEST*.xml"
-          reporter: java-junit
+          name: Payment-Unit-Test-Results
+          path: "payment/test-results/junit.xml"
+          reporter: jest-junit
 
       - name: Write Test Summary to Job
         if: always()
         run: |
-          echo "## 🧪 Test Result: backoffice" >> $GITHUB_STEP_SUMMARY
-          TEST_FILES=$(find backoffice/target/surefire-reports -name "TEST-*.xml" 2>/dev/null || true)
-          if [ -z "$TEST_FILES" ]; then
+          echo "## 🧪 Test Result: payment" >> $GITHUB_STEP_SUMMARY
+          # Logic parse nhanh file junit.xml cho npm
+          if [ ! -f "test-results/junit.xml" ]; then
             echo "❌ Không tìm thấy file kết quả test." >> $GITHUB_STEP_SUMMARY
           else
-            TOTAL_TESTS=0; TOTAL_FAILURES=0; TOTAL_ERRORS=0; TOTAL_SKIPPED=0
-            for FILE in $TEST_FILES; do
-              TESTS=$(grep -oE 'tests="[0-9]+"' "$FILE" | cut -d'"' -f2 | head -1)
-              FAILURES=$(grep -oE 'failures="[0-9]+"' "$FILE" | cut -d'"' -f2 | head -1)
-              ERRORS=$(grep -oE 'errors="[0-9]+"' "$FILE" | cut -d'"' -f2 | head -1)
-              SKIPPED=$(grep -oE 'skipped="[0-9]+"' "$FILE" | cut -d'"' -f2 | head -1)
-              TOTAL_TESTS=$((TOTAL_TESTS + TESTS))
-              TOTAL_FAILURES=$((TOTAL_FAILURES + FAILURES))
-              TOTAL_ERRORS=$((TOTAL_ERRORS + ERRORS))
-              TOTAL_SKIPPED=$((TOTAL_SKIPPED + SKIPPED))
-            done
-            TOTAL_PASSED=$((TOTAL_TESTS - TOTAL_FAILURES - TOTAL_ERRORS - TOTAL_SKIPPED))
+            # Extract basic info from junit xml
+            TESTS=$(grep -oE 'tests="[0-9]+"' test-results/junit.xml | head -1 | cut -d'"' -f2)
+            FAILURES=$(grep -oE 'failures="[0-9]+"' test-results/junit.xml | head -1 | cut -d'"' -f2)
             echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
             echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
-            echo "| ✅ Passed | $TOTAL_PASSED |" >> $GITHUB_STEP_SUMMARY
-            echo "| ❌ Failures | $TOTAL_FAILURES |" >> $GITHUB_STEP_SUMMARY
-            echo "| ⚠️ Errors | $TOTAL_ERRORS |" >> $GITHUB_STEP_SUMMARY
-            echo "| ⏭️ Skipped | $TOTAL_SKIPPED |" >> $GITHUB_STEP_SUMMARY
-            echo "| **Total** | **$TOTAL_TESTS** |" >> $GITHUB_STEP_SUMMARY
+            echo "| ✅ Passed | $((TESTS - FAILURES)) |" >> $GITHUB_STEP_SUMMARY
+            echo "| ❌ Failures | $FAILURES |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Total** | **$TESTS** |" >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: Upload Jacoco Report
+      - name: Upload Coverage Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: jacoco-report-backoffice
-          # Upload đúng file jacoco.xml từ folder site
-          path: backoffice/target/site/jacoco/jacoco.xml
+          name: coverage-report-payment
+          path: payment/coverage/lcov.info
           retention-days: 1
+
   SonarCloud:
-    needs: [Build, Test] # Cần cả Build để lấy class và Test để lấy Jacoco
+    needs: [Build, Test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: ./.github/workflows/actions
 
-      - name: Download Build Artifacts
+      - name: Download Coverage Report
         uses: actions/download-artifact@v4
         with:
-          name: build-assets-backoffice
+          name: coverage-report-payment
+          path: payment/coverage/
 
-      - name: Download Jacoco Report
-        uses: actions/download-artifact@v4
-        with:
-          name: jacoco-report-backoffice
-          path: backoffice/target/site/jacoco/
-
-      - name: Analyze with sonar cloud
-        id: sonar
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        # Lưu ý: Không dùng 'clean' ở đây vì sẽ làm mất artifact vừa download
-        run: >
-          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
-          -pl backoffice -am -f pom.xml
-          -Dsonar.coverage.jacoco.xmlReportPaths=backoffice/target/site/jacoco/jacoco.xml
-      - name: SonarCloud Summary
-        if: always()
-        run: |
-          if [ "${{ steps.sonar.outcome }}" = "success" ]; then ICON="🟢"; STATUS="PASS"; else ICON="🔴"; STATUS="FAIL"; fi
-          {
-            echo "## SonarCloud Report: backoffice"
-            echo "| Item | Value |"
-            echo "|------|-------|"
-            echo "| Status | $ICON **$STATUS** |"
-            echo "### Dashboard"
-            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
-          } >> $GITHUB_STEP_SUMMARY
+        with:
+          projectBaseDir: payment
+          args: >
+            -Dsonar.projectKey=<YOUR_PROJECT_KEY>
+            -Dsonar.organization=<YOUR_ORG>
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+            -Dsonar.sources=src
+            -Dsonar.tests=src
+            -Dsonar.test.inclusions=**/*.spec.ts,**/*.test.ts
 
   Check-Coverage:
     needs: Test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Checkout Code 
         uses: actions/checkout@v4
 
-      - name: Download Jacoco Report
+      - name: Download Coverage Report
         uses: actions/download-artifact@v4
         with:
-          name: jacoco-report-backoffice
-          path: target/jacoco-results
+          name: coverage-report-payment
+          path: coverage
 
-      - name: Add coverage report to PR
-        id: jacoco_report
-        uses: madrapps/jacoco-report@v1.6.1
+      - name: Monitor Coverage
+        # Sử dụng action phù hợp cho Node/LCOV
+        uses: arturbalicchia/lcov-reporter-action@v0
         with:
-          # Chỉ định chính xác file đã download về
-          paths: ${{github.workspace}}/target/jacoco-results/jacoco.xml
-          token: ${{secrets.GITHUB_TOKEN}}
-          min-coverage-overall: 70
-          min-coverage-changed-files: 60
-          title: 'Backoffice Coverage Report'
-          update-comment: false
-
-      - name: Write Coverage Summary
-        if: always()
-        run: |
-          COVERAGE="${{ steps.jacoco_report.outputs.coverage-overall }}"
-          CHANGED="${{ steps.jacoco_report.outputs.coverage-changed-files }}"
-          [ -z "$COVERAGE" ] && COVERAGE=0
-          [ -z "$CHANGED" ] && CHANGED=0
-          THRESHOLD=70
-          if (( $(echo "$COVERAGE >= $THRESHOLD" | bc -l) )); then ICON="✅"; STATUS="PASSED"; else ICON="❌"; STATUS="FAILED"; fi
-
-          echo "## 📊 Coverage Summary: backoffice" >> $GITHUB_STEP_SUMMARY
-          echo "| Metric | Value | Threshold | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|-------|-----------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Overall Coverage | $COVERAGE% | $THRESHOLD% | $ICON $STATUS |" >> $GITHUB_STEP_SUMMARY
-          echo "| Changed Files | $CHANGED% | 60% | - |" >> $GITHUB_STEP_SUMMARY
-      - name: Enforce Threshold
-        run: |
-          THRESHOLD=70
-          COVERAGE=${{ steps.jacoco_report.outputs.coverage-overall }}
-          if (( $(echo "$COVERAGE <= $THRESHOLD" | bc -l) )); then
-            echo "Độ bao phủ code ($COVERAGE%) thấp hơn yêu cầu ($THRESHOLD%)!"
-            exit 1
-          fi
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          lcov-file: ./coverage/lcov.info
+          filter-changed-files: true
+          min-coverage: 70
