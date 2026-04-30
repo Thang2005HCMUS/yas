@@ -1,19 +1,28 @@
-name: search service ci
+import os
+
+# Danh sách các service Java cần tạo CI
+JAVA_SERVICES = [
+    "search", "promotion", "customer", "inventory", "payment", "order", 
+    "tax", "rating", "location", "storefront-bff", "backoffice-bff", 
+    "pricing", "product", "media", "payment-paypal", "webhook", "sampledata", "cart", "recommendation"
+]
+
+TEMPLATE = """name: {service} service ci
 
 on:
   push:
     branches: ["**"]
     paths:
-      - "search/**"
+      - "{service}/**"
       - ".github/workflows/actions/action.yaml"
-      - ".github/workflows/search-ci.yaml"
+      - ".github/workflows/{service}-ci.yaml"
       - "pom.xml"
   pull_request:
     branches: ["main"]
     paths:
-      - "search/**"
+      - "{service}/**"
       - ".github/workflows/actions/action.yaml"
-      - ".github/workflows/search-ci.yaml"
+      - ".github/workflows/{service}-ci.yaml"
       - "pom.xml"
   workflow_dispatch:
 
@@ -28,31 +37,31 @@ jobs:
       - uses: ./.github/workflows/actions
 
       - name: Run Maven Build Command
-        run: mvn clean install -pl search -am -DskipTests
+        run: mvn clean install -pl {service} -am -DskipTests
 
       - name: Run Maven Checkstyle
-        run: mvn checkstyle:checkstyle -pl search -am -Dcheckstyle.output.file=search-checkstyle-result.xml
+        run: mvn checkstyle:checkstyle -pl {service} -am -Dcheckstyle.output.file={service}-checkstyle-result.xml
 
       - name: Upload Checkstyle Result
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
-          path: '**/search-checkstyle-result.xml'
+          path: '**/{service}-checkstyle-result.xml'
 
       - name: Log in to the Container registry
-        if: ${{ github.ref == 'refs/heads/main' }}
+        if: ${{{{ github.ref == 'refs/heads/main' }}}}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{{{ github.actor }}}}
+          password: ${{{{ secrets.GITHUB_TOKEN }}}}
 
       - name: Build and push Docker images
-        if: ${{ github.ref == 'refs/heads/main' }}
+        if: ${{{{ github.ref == 'refs/heads/main' }}}}
         uses: docker/build-push-action@v6
         with:
-          context: ./search
+          context: ./{service}
           push: true
-          tags: ghcr.io/nashtech-garage/yas-search:latest
+          tags: ghcr.io/nashtech-garage/yas-{service}:latest
 
   Test:
     needs: Build
@@ -62,23 +71,23 @@ jobs:
       - uses: ./.github/workflows/actions
 
       - name: Run Unit Tests
-        run: mvn test -pl search -am
+        run: mvn test -pl {service} -am
 
       - name: Test Results Summary (Tab)
         uses: dorny/test-reporter@v1
         if: always()
         with:
-          name: Search-Unit-Test-Results
-          path: "search/**/*-reports/TEST*.xml"
+          name: {service_cap}-Unit-Test-Results
+          path: "{service}/**/*-reports/TEST*.xml"
           reporter: java-junit
 
       - name: Write Test Summary to Job
         if: always()
         run: |
-          echo "## 🧪 Test Result: search" >> $GITHUB_STEP_SUMMARY
+          echo "## 🧪 Test Result: {service}" >> $GITHUB_STEP_SUMMARY
           
           # Tìm các file xml kết quả và cộng dồn stats
-          TEST_FILES=$(find search/target/surefire-reports -name "TEST-*.xml" 2>/dev/null || true)
+          TEST_FILES=$(find {service}/target/surefire-reports -name "TEST-*.xml" 2>/dev/null || true)
           
           if [ -z "$TEST_FILES" ]; then
             echo "❌ Không tìm thấy file kết quả test." >> $GITHUB_STEP_SUMMARY
@@ -115,8 +124,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: jacoco-report-search
-          path: search/target/site/jacoco/jacoco.xml
+          name: jacoco-report-{service}
+          path: {service}/target/site/jacoco/jacoco.xml
           retention-days: 1
 
   SonarCloud:
@@ -131,23 +140,23 @@ jobs:
       - name: Download Jacoco Report
         uses: actions/download-artifact@v4
         with:
-          name: jacoco-report-search
-          path: search/target/site/jacoco/
+          name: jacoco-report-{service}
+          path: {service}/target/site/jacoco/
 
       - name: Analyze with sonar cloud
         id: sonar
         continue-on-error: true
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_TOKEN: ${{{{ secrets.SONAR_TOKEN }}}}
         run: >
           mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
-          -pl search -am -f pom.xml
-          -Dsonar.coverage.jacoco.xmlReportPaths=search/target/site/jacoco/jacoco.xml
+          -pl {service} -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths={service}/target/site/jacoco/jacoco.xml
 
       - name: SonarCloud Summary
         if: always()
         run: |
-          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
+          if [ "${{{{ steps.sonar.outcome }}}}" = "success" ]; then
             ICON="🟢"
             STATUS="PASS"
           else
@@ -155,18 +164,18 @@ jobs:
             STATUS="FAIL"
           fi
 
-          {
-            echo "## SonarCloud Report: search"
+          {{
+            echo "## SonarCloud Report: {service}"
             echo ""
             echo "| Item | Value |"
             echo "|------|-------|"
             echo "| Status | $ICON **$STATUS** |"
-            echo "| Service | \`search\` |"
-            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Service | \`{service}\` |"
+            echo "| Commit | \`${{{{ github.sha }}}}\` |"
             echo ""
             echo "### Dashboard"
             echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
-          } >> $GITHUB_STEP_SUMMARY
+          }} >> $GITHUB_STEP_SUMMARY
 
   Check-Coverage:
     needs: Test
@@ -178,24 +187,24 @@ jobs:
       - name: Download Jacoco Report
         uses: actions/download-artifact@v4
         with:
-          name: jacoco-report-search
+          name: jacoco-report-{service}
           path: target/jacoco-results
 
       - name: Add coverage report to PR
         id: jacoco_report
         uses: madrapps/jacoco-report@v1.6.1
         with:
-          paths: ${{github.workspace}}/target/jacoco-results/jacoco.xml
-          token: ${{secrets.GITHUB_TOKEN}}
+          paths: ${{{{github.workspace}}}}/target/jacoco-results/jacoco.xml
+          token: ${{{{secrets.GITHUB_TOKEN}}}}
           min-coverage-overall: 80
           min-coverage-changed-files: 60
-          title: 'Search Coverage Report'
+          title: '{service_cap} Coverage Report'
           update-comment: true
 
       - name: Write Coverage Summary
         if: always()
         run: |
-          COVERAGE=${{ steps.jacoco_report.outputs.coverage-overall }}
+          COVERAGE=${{{{ steps.jacoco_report.outputs.coverage-overall }}}}
           THRESHOLD=70
           
           if (( $(echo "$COVERAGE > $THRESHOLD" | bc -l) )); then
@@ -206,21 +215,39 @@ jobs:
             STATUS="FAILED"
           fi
 
-          {
-            echo "## 📊 Coverage Summary: search"
+          {{
+            echo "## 📊 Coverage Summary: {service}"
             echo ""
             echo "| Metric | Value | Threshold | Status |"
             echo "|--------|-------|-----------|--------|"
             echo "| Overall Coverage | $COVERAGE% | $THRESHOLD% | $ICON $STATUS |"
-            echo "| Changed Files | ${{ steps.jacoco_report.outputs.coverage-changed-files }}% | 60% | - |"
+            echo "| Changed Files | ${{{{ steps.jacoco_report.outputs.coverage-changed-files }}}}% | 60% | - |"
             echo ""
             echo "Vui lòng kiểm tra chi tiết trong phần bình luận của Pull Request."
-          } >> $GITHUB_STEP_SUMMARY
+          }} >> $GITHUB_STEP_SUMMARY
 
       - name: Enforce Threshold
         run: |
-          COVERAGE=${{ steps.jacoco_report.outputs.coverage-overall }}
+          COVERAGE=${{{{ steps.jacoco_report.outputs.coverage-overall }}}}
           if (( $(echo "$COVERAGE <= 70" | bc -l) )); then
             echo "Độ bao phủ code ($COVERAGE%) thấp hơn yêu cầu (70%)!"
             exit 1
           fi
+"""
+
+def main():
+    output_dir = ".github/workflows"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    for service in JAVA_SERVICES:
+        service_cap = service.replace("-", " ").title().replace(" ", "")
+        content = TEMPLATE.format(service=service, service_cap=service_cap)
+        
+        file_path = os.path.join(output_dir, f"{service}-ci.yaml")
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        print(f"Generated: {file_path}")
+
+if __name__ == "__main__":
+    main()
