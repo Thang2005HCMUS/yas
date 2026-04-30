@@ -96,4 +96,11 @@ class PaymentControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string("Payment cancelled"));
     }
+    @TestConfiguration
+static class TestConfig {
+    @Bean
+    ObjectMapper objectMapper() {
+        return new ObjectMapper();
+    }
+}
 }
