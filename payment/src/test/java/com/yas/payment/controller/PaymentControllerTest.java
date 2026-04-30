@@ -3,6 +3,8 @@ package com.yas.payment.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yas.payment.service.PaymentService;
 import com.yas.payment.viewmodel.*;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
