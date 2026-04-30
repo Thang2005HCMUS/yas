@@ -1,0 +1,1228 @@
+== ./PaymentApplication.java ==
+package com.yas.payment;
+
+import com.yas.commonlibrary.config.CorsConfig;
+import com.yas.payment.config.ServiceUrlConfig;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Import;
+
+@SpringBootApplication(scanBasePackages = {"com.yas.payment", "com.yas.commonlibrary"})
+@EnableConfigurationProperties({ServiceUrlConfig.class, CorsConfig.class})
+public class PaymentApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(PaymentApplication.class, args);
+    }
+}
+
+
+== ./repository/PaymentRepository.java ==
+package com.yas.payment.repository;
+
+import com.yas.payment.model.Payment;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface PaymentRepository extends JpaRepository<Payment, Long> {
+}
+
+== ./repository/PaymentProviderRepository.java ==
+package com.yas.payment.repository;
+
+import com.yas.payment.model.PaymentProvider;
+import java.util.List;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface PaymentProviderRepository extends JpaRepository<PaymentProvider, String> {
+
+    List<PaymentProvider> findByEnabledTrue(Pageable pageable);
+
+}
+
+== ./config/RestClientConfig.java ==
+package com.yas.payment.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.web.client.RestClient;
+
+@Configuration
+public class RestClientConfig {
+
+    @Bean
+    public RestClient getRestClient(RestClient.Builder restClientBuilder) {
+        return restClientBuilder
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .build();
+    }
+}
+
+
+== ./config/ServiceUrlConfig.java ==
+package com.yas.payment.config;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+@ConfigurationProperties(prefix = "yas.services")
+public record ServiceUrlConfig(
+        String order,
+        String media
+) {}
+
+
+== ./config/SwaggerConfig.java ==
+package com.yas.payment.config;
+
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
+import io.swagger.v3.oas.annotations.info.Info;
+import io.swagger.v3.oas.annotations.security.OAuthFlow;
+import io.swagger.v3.oas.annotations.security.OAuthFlows;
+import io.swagger.v3.oas.annotations.security.OAuthScope;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import io.swagger.v3.oas.annotations.servers.Server;
+
+@OpenAPIDefinition(
+    info = @Info(title = "Payment Service API", description = "Payment API documentation", version = "1.0"),
+    security = @SecurityRequirement(name = "oauth2_bearer"),
+    servers = {
+        @Server(url = "${server.servlet.context-path}", description = "Default Server URL")
+    }
+)
+@SecurityScheme(
+    name = "oauth2_bearer",
+    type = SecuritySchemeType.OAUTH2,
+    flows = @OAuthFlows(
+        authorizationCode =
+         @OAuthFlow(
+             authorizationUrl = "${springdoc.oauthflow.authorization-url}",
+             tokenUrl = "${springdoc.oauthflow.token-url}",
+             scopes = {
+                 @OAuthScope(name = "openid", description = "openid")
+             }
+         )
+    )
+)
+public class SwaggerConfig {
+}
+
+
+== ./config/SecurityConfig.java ==
+package com.yas.payment.config;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Map;
+import java.util.stream.Collectors;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+public class SecurityConfig {
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        return http
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/actuator/prometheus", "/actuator/health/**",
+                                "/swagger-ui", "/swagger-ui/**", "/error", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/storefront/**").permitAll()
+                        .requestMatchers("/backoffice/**").hasRole("ADMIN")
+                        .requestMatchers("/payment-providers/**").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
+                        .anyRequest().authenticated())
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
+                .build();
+    }
+
+    @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverterForKeycloak() {
+        Converter<Jwt, Collection<GrantedAuthority>> jwtGrantedAuthoritiesConverter = jwt -> {
+            Map<String, Collection<String>> realmAccess = jwt.getClaim("realm_access");
+            Collection<String> roles = realmAccess.get("roles");
+            return roles.stream()
+                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                    .collect(Collectors.toCollection(ArrayList::new));
+        };
+
+        var jwtAuthenticationConverter = new JwtAuthenticationConverter();
+        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwtGrantedAuthoritiesConverter);
+
+        return jwtAuthenticationConverter;
+    }
+}
+
+
+== ./config/DatabaseAutoConfig.java ==
+package com.yas.payment.config;
+
+import java.util.Optional;
+import org.springframework.boot.persistence.autoconfigure.EntityScan;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.domain.AuditorAware;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+@Configuration
+@EnableJpaRepositories("com.yas.payment.repository")
+@EntityScan("com.yas.payment.model")
+@EnableJpaAuditing(auditorAwareRef = "auditorAware")
+public class DatabaseAutoConfig {
+
+    @Bean
+    public AuditorAware<String> auditorAware() {
+        return () -> {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null) {
+                return Optional.of("");
+            }
+            return Optional.of(auth.getName());
+        };
+    }
+}
+
+== ./service/PaymentService.java ==
+package com.yas.payment.service;
+
+import com.yas.payment.model.CapturedPayment;
+import com.yas.payment.model.InitiatedPayment;
+import com.yas.payment.model.Payment;
+import com.yas.payment.repository.PaymentRepository;
+import com.yas.payment.service.provider.handler.PaymentHandler;
+import com.yas.payment.viewmodel.CapturePaymentRequestVm;
+import com.yas.payment.viewmodel.CapturePaymentResponseVm;
+import com.yas.payment.viewmodel.InitPaymentRequestVm;
+import com.yas.payment.viewmodel.InitPaymentResponseVm;
+import com.yas.payment.viewmodel.PaymentOrderStatusVm;
+import jakarta.annotation.PostConstruct;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class PaymentService {
+    private final PaymentRepository paymentRepository;
+    private final OrderService orderService;
+    private final Map<String, PaymentHandler> providers = new HashMap<>();
+
+    @Autowired
+    private final List<PaymentHandler> paymentHandlers;
+
+    @PostConstruct
+    public void initializeProviders() {
+        for (PaymentHandler handler : paymentHandlers) {
+            providers.put(handler.getProviderId(), handler);
+        }
+    }
+
+    private PaymentHandler getPaymentHandler(String providerName) {
+        PaymentHandler handler = providers.get(providerName);
+        if (handler == null) {
+            throw new IllegalArgumentException("No payment handler found for provider: " + providerName);
+        }
+        return handler;
+    }
+
+    public InitPaymentResponseVm initPayment(InitPaymentRequestVm initPaymentRequestVm) {
+        PaymentHandler paymentHandler = getPaymentHandler(initPaymentRequestVm.paymentMethod());
+        InitiatedPayment initiatedPayment = paymentHandler.initPayment(initPaymentRequestVm);
+        return InitPaymentResponseVm.builder()
+                .status(initiatedPayment.getStatus())
+                .paymentId(initiatedPayment.getPaymentId())
+                .redirectUrl(initiatedPayment.getRedirectUrl())
+                .build();
+    }
+
+    public CapturePaymentResponseVm capturePayment(CapturePaymentRequestVm capturePaymentRequestVm) {
+        PaymentHandler paymentHandler = getPaymentHandler(capturePaymentRequestVm.paymentMethod());
+        CapturedPayment capturedPayment = paymentHandler.capturePayment(capturePaymentRequestVm);
+        Long orderId = orderService.updateCheckoutStatus(capturedPayment);
+        capturedPayment.setOrderId(orderId);
+        Payment payment = createPayment(capturedPayment);
+        PaymentOrderStatusVm orderPaymentStatusVm =
+                PaymentOrderStatusVm.builder()
+                        .paymentId(payment.getId())
+                        .orderId(payment.getOrderId())
+                        .paymentStatus(payment.getPaymentStatus().name())
+                        .build();
+        orderService.updateOrderStatus(orderPaymentStatusVm);
+        return CapturePaymentResponseVm.builder()
+                .orderId(capturedPayment.getOrderId())
+                .checkoutId(capturedPayment.getCheckoutId())
+                .amount(capturedPayment.getAmount())
+                .paymentFee(capturedPayment.getPaymentFee())
+                .gatewayTransactionId(capturedPayment.getGatewayTransactionId())
+                .paymentMethod(capturedPayment.getPaymentMethod())
+                .paymentStatus(capturedPayment.getPaymentStatus())
+                .failureMessage(capturedPayment.getFailureMessage())
+                .build();
+    }
+
+    private Payment createPayment(CapturedPayment capturedPayment) {
+        Payment payment = Payment.builder()
+                .checkoutId(capturedPayment.getCheckoutId())
+                .orderId(capturedPayment.getOrderId())
+                .paymentStatus(capturedPayment.getPaymentStatus())
+                .paymentFee(capturedPayment.getPaymentFee())
+                .paymentMethod(capturedPayment.getPaymentMethod())
+                .amount(capturedPayment.getAmount())
+                .failureMessage(capturedPayment.getFailureMessage())
+                .gatewayTransactionId(capturedPayment.getGatewayTransactionId())
+                .build();
+        return paymentRepository.save(payment);
+    }
+}
+
+
+== ./service/PaymentProviderService.java ==
+package com.yas.payment.service;
+
+import com.yas.commonlibrary.exception.NotFoundException;
+import com.yas.payment.mapper.CreatePaymentProviderMapper;
+import com.yas.payment.mapper.PaymentProviderMapper;
+import com.yas.payment.mapper.UpdatePaymentProviderMapper;
+import com.yas.payment.model.PaymentProvider;
+import com.yas.payment.repository.PaymentProviderRepository;
+import com.yas.payment.utils.Constants;
+import com.yas.payment.viewmodel.paymentprovider.CreatePaymentVm;
+import com.yas.payment.viewmodel.paymentprovider.MediaVm;
+import com.yas.payment.viewmodel.paymentprovider.PaymentProviderVm;
+import com.yas.payment.viewmodel.paymentprovider.UpdatePaymentVm;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * Payment provider service.
+ */
+@Slf4j
+@Service
+public class PaymentProviderService {
+
+    private final MediaService mediaService;
+    private final PaymentProviderRepository paymentProviderRepository;
+
+    private final PaymentProviderMapper paymentProviderMapper;
+    private final CreatePaymentProviderMapper createPaymentProviderMapper;
+    private final UpdatePaymentProviderMapper updatePaymentProviderMapper;
+
+    public PaymentProviderService(
+        MediaService mediaService,
+        PaymentProviderMapper paymentProviderMapper,
+        CreatePaymentProviderMapper createPaymentProviderMapper,
+        UpdatePaymentProviderMapper updatePaymentProviderMapper,
+        PaymentProviderRepository paymentProviderRepository
+    ) {
+        this.mediaService = mediaService;
+        this.paymentProviderMapper = paymentProviderMapper;
+        this.createPaymentProviderMapper = createPaymentProviderMapper;
+        this.updatePaymentProviderMapper = updatePaymentProviderMapper;
+        this.paymentProviderRepository = paymentProviderRepository;
+    }
+
+    /**
+     * Create payment provider.
+     *
+     * @param createPaymentVm {@link CreatePaymentVm} payment provider request.
+     * @return {@link PaymentProviderVm} created payment provider.
+     */
+    @Transactional
+    public PaymentProviderVm create(CreatePaymentVm createPaymentVm) {
+        var paymentProvider = createPaymentProviderMapper.toModel(createPaymentVm);
+        var savedPaymentProvider = paymentProviderRepository.save(paymentProvider);
+        return createPaymentProviderMapper.toVmResponse(savedPaymentProvider);
+    }
+
+    /**
+     * Update payment provider.
+     *
+     * @param updatePaymentVm {@link UpdatePaymentVm} payment provider request
+     * @return {@link PaymentProviderVm} updated payment provider.
+     */
+    @Transactional
+    public PaymentProviderVm update(UpdatePaymentVm updatePaymentVm) {
+        var paymentProvider = findByIdOrElseThrow(updatePaymentVm.getId());
+        updatePaymentProviderMapper.partialUpdate(paymentProvider, updatePaymentVm);
+        paymentProviderRepository.save(paymentProvider);
+        return updatePaymentProviderMapper.toVmResponse(paymentProvider);
+    }
+
+    public String getAdditionalSettingsByPaymentProviderId(String paymentProviderId) {
+        return findByIdOrElseThrow(paymentProviderId).getAdditionalSettings();
+    }
+
+    /**
+     * Get enabled payment providers.
+     *
+     * @return enabled providers.
+     */
+    public List<PaymentProviderVm> getEnabledPaymentProviders(Pageable pageable) {
+        var providers = paymentProviderRepository.findByEnabledTrue(pageable);
+        if (providers.isEmpty()) {
+            log.debug("No enabled payment provider found");
+            return Collections.emptyList();
+        }
+
+        final Map<Long, MediaVm> mediaVmMap = mediaService.getMediaVmMap(providers);
+        return providers.stream()
+            .map(provider -> toPaymentProviderVm(provider, mediaVmMap))
+            .toList();
+    }
+
+    private PaymentProvider findByIdOrElseThrow(String paymentProviderId) {
+        return paymentProviderRepository.findById(paymentProviderId)
+            .orElseThrow(
+                () -> new NotFoundException(Constants.ErrorCode.PAYMENT_PROVIDER_NOT_FOUND, paymentProviderId)
+            );
+    }
+
+    private PaymentProviderVm toPaymentProviderVm(PaymentProvider provider, Map<Long, MediaVm> mediaVmMap) {
+        var vm = paymentProviderMapper.toVm(provider);
+        var iconUrl = mediaVmMap.getOrDefault(provider.getMediaId(), MediaVm.builder().build()).getUrl();
+        vm.setIconUrl(iconUrl);
+        return vm;
+    }
+
+}
+
+== ./service/OrderService.java ==
+package com.yas.payment.service;
+
+import com.yas.payment.config.ServiceUrlConfig;
+import com.yas.payment.model.CapturedPayment;
+import com.yas.payment.viewmodel.CheckoutStatusVm;
+import com.yas.payment.viewmodel.PaymentOrderStatusVm;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+import java.net.URI;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
+
+@Service
+@Slf4j
+@RequiredArgsConstructor
+public class OrderService extends AbstractCircuitBreakFallbackHandler {
+
+    private final RestClient restClient;
+    private final ServiceUrlConfig serviceUrlConfig;
+
+    @Retry(name = "restApi")
+    @CircuitBreaker(name = "restCircuitBreaker", fallbackMethod = "handleLongFallback")
+    public Long updateCheckoutStatus(CapturedPayment capturedPayment) {
+        final String jwt = ((Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal())
+                .getTokenValue();
+        final URI url = UriComponentsBuilder
+                .fromUriString(serviceUrlConfig.order())
+                .path("/storefront/checkouts/status")
+                .buildAndExpand()
+                .toUri();
+        CheckoutStatusVm checkoutStatusVm = new CheckoutStatusVm(capturedPayment.getCheckoutId(),
+                capturedPayment.getPaymentStatus().name());
+
+        return restClient.put()
+                .uri(url)
+                .headers(h -> h.setBearerAuth(jwt))
+                .body(checkoutStatusVm)
+            .retrieve()
+            .body(Long.class);
+    }
+
+    @Retry(name = "restApi")
+    @CircuitBreaker(name = "restCircuitBreaker", fallbackMethod = "handlePaymentOrderStatusFallback")
+    public PaymentOrderStatusVm updateOrderStatus(PaymentOrderStatusVm orderPaymentStatusVm) {
+        final String jwt =
+            ((Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getTokenValue();
+        final URI url = UriComponentsBuilder
+            .fromUriString(serviceUrlConfig.order())
+            .path("/storefront/orders/status")
+            .buildAndExpand()
+            .toUri();
+
+        return restClient.put()
+            .uri(url)
+            .headers(h -> h.setBearerAuth(jwt))
+            .body(orderPaymentStatusVm)
+            .retrieve()
+            .body(PaymentOrderStatusVm.class);
+    }
+
+    protected Long handleLongFallback(Throwable throwable) throws Throwable {
+        return handleTypedFallback(throwable);
+    }
+
+    protected PaymentOrderStatusVm handlePaymentOrderStatusFallback(Throwable throwable) throws Throwable {
+        return handleTypedFallback(throwable);
+    }
+}
+
+
+== ./service/MediaService.java ==
+package com.yas.payment.service;
+
+import static com.yas.commonlibrary.utils.AuthenticationUtils.extractJwt;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
+
+import com.yas.payment.config.ServiceUrlConfig;
+import com.yas.payment.model.PaymentProvider;
+import com.yas.payment.viewmodel.paymentprovider.MediaVm;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+import java.net.URI;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
+
+@Slf4j
+@Service
+public class MediaService extends AbstractCircuitBreakFallbackHandler {
+
+    public static final String IDS_PARAMS = "ids";
+
+    private final RestClient restClient;
+    private final ServiceUrlConfig serviceUrlConfig;
+
+    public MediaService(RestClient restClient, ServiceUrlConfig serviceUrlConfig) {
+        this.restClient = restClient;
+        this.serviceUrlConfig = serviceUrlConfig;
+    }
+
+    @Retry(name = "restApi")
+    @CircuitBreaker(name = "restCircuitBreaker", fallbackMethod = "fallbackGetMediaVmMap")
+    public Map<Long, MediaVm> getMediaVmMap(List<PaymentProvider> providers) {
+        Set<Long> mediaIds = getMediaIds(providers);
+        if (mediaIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        final URI url = getMediasUrl(mediaIds);
+        log.debug("Fetch media to get payment provider medias: {}", url);
+        var medias = restClient.get()
+            .uri(url)
+            .headers(h -> h.setBearerAuth(extractJwt()))
+            .retrieve()
+            .body(new ParameterizedTypeReference<List<MediaVm>>() {});
+
+        return medias.stream().collect(toMap(MediaVm::getId, identity()));
+    }
+
+    private Set<Long> getMediaIds(List<PaymentProvider> providers) {
+        return providers.stream()
+                .map(PaymentProvider::getMediaId)
+                .collect(Collectors.toSet());
+    }
+
+    private URI getMediasUrl(Set<Long> mediaIds) {
+        var iconIds = mediaIds.stream()
+            .map(String::valueOf)
+            .collect(Collectors.joining(","));
+        return UriComponentsBuilder
+            .fromUriString(serviceUrlConfig.media())
+            .path("/medias")
+            .queryParam(IDS_PARAMS, iconIds)
+            .build()
+            .toUri();
+    }
+
+    private Map<Long, MediaVm> fallbackGetMediaVmMap(List<PaymentProvider> providers,
+            Throwable throwable) {
+        log.error("Failed to get media for IDs: {}", providers.stream().map(PaymentProvider::getMediaId).toList());
+        log.error("Fallback triggered for getMediaVmMap", throwable);
+        return Collections.emptyMap();
+    }
+
+}
+
+== ./service/AbstractCircuitBreakFallbackHandler.java ==
+package com.yas.payment.service;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+abstract class AbstractCircuitBreakFallbackHandler {
+
+    protected void handleBodilessFallback(Throwable throwable) throws Throwable {
+        handleError(throwable);
+    }
+
+    protected <T> T handleTypedFallback(Throwable throwable) throws Throwable {
+        handleError(throwable);
+        return null;
+    }
+
+    private void handleError(Throwable throwable) throws Throwable {
+        log.error("Circuit breaker records an error. Detail {}", throwable.getMessage());
+        throw throwable;
+    }
+}
+
+
+== ./service/provider/handler/PaymentHandler.java ==
+package com.yas.payment.service.provider.handler;
+
+import com.yas.payment.model.CapturedPayment;
+import com.yas.payment.model.InitiatedPayment;
+import com.yas.payment.viewmodel.CapturePaymentRequestVm;
+import com.yas.payment.viewmodel.InitPaymentRequestVm;
+
+public interface PaymentHandler {
+    String getProviderId();
+
+    InitiatedPayment initPayment(InitPaymentRequestVm initPaymentRequestVm);
+
+    CapturedPayment capturePayment(CapturePaymentRequestVm capturePaymentRequestVm);
+}
+
+
+== ./service/provider/handler/AbstractPaymentHandler.java ==
+package com.yas.payment.service.provider.handler;
+
+import com.yas.payment.service.PaymentProviderService;
+
+abstract class AbstractPaymentHandler {
+    private final PaymentProviderService paymentProviderService;
+
+    AbstractPaymentHandler(PaymentProviderService paymentProviderService) {
+        this.paymentProviderService = paymentProviderService;
+    }
+
+    String getPaymentSettings(String providerId) {
+        return paymentProviderService.getAdditionalSettingsByPaymentProviderId(providerId);
+    }
+}
+
+
+== ./service/provider/handler/PaypalHandler.java ==
+package com.yas.payment.service.provider.handler;
+
+import com.yas.payment.model.CapturedPayment;
+import com.yas.payment.model.InitiatedPayment;
+import com.yas.payment.model.enumeration.PaymentMethod;
+import com.yas.payment.model.enumeration.PaymentStatus;
+import com.yas.payment.paypal.service.PaypalService;
+import com.yas.payment.paypal.viewmodel.PaypalCapturePaymentRequest;
+import com.yas.payment.paypal.viewmodel.PaypalCapturePaymentResponse;
+import com.yas.payment.paypal.viewmodel.PaypalCreatePaymentRequest;
+import com.yas.payment.paypal.viewmodel.PaypalCreatePaymentResponse;
+import com.yas.payment.service.PaymentProviderService;
+import com.yas.payment.viewmodel.CapturePaymentRequestVm;
+import com.yas.payment.viewmodel.InitPaymentRequestVm;
+import org.springframework.stereotype.Component;
+
+@Component
+public class PaypalHandler extends AbstractPaymentHandler implements PaymentHandler {
+
+    private final PaypalService paypalService;
+
+    PaypalHandler(PaymentProviderService paymentProviderService, PaypalService paypalService) {
+        super(paymentProviderService);
+        this.paypalService = paypalService;
+    }
+
+    @Override
+    public String getProviderId() {
+        return PaymentMethod.PAYPAL.name();
+    }
+
+    @Override
+    public InitiatedPayment initPayment(InitPaymentRequestVm initPaymentRequestVm) {
+        PaypalCreatePaymentRequest requestPayment = PaypalCreatePaymentRequest.builder()
+                .totalPrice(initPaymentRequestVm.totalPrice())
+                .checkoutId(initPaymentRequestVm.checkoutId())
+                .paymentMethod(initPaymentRequestVm.paymentMethod())
+                .paymentSettings(getPaymentSettings(getProviderId()))
+                .build();
+        PaypalCreatePaymentResponse paypalCreatePaymentResponse = paypalService.createPayment(requestPayment);
+        return InitiatedPayment.builder()
+                .status(paypalCreatePaymentResponse.status())
+                .paymentId(paypalCreatePaymentResponse.paymentId())
+                .redirectUrl(paypalCreatePaymentResponse.redirectUrl())
+                .build();
+    }
+
+    @Override
+    public CapturedPayment capturePayment(CapturePaymentRequestVm capturePaymentRequestVm) {
+        PaypalCapturePaymentRequest paypalCapturePaymentRequest = PaypalCapturePaymentRequest.builder()
+                .token(capturePaymentRequestVm.token())
+                .paymentSettings(getPaymentSettings(getProviderId()))
+                .build();
+        PaypalCapturePaymentResponse paypalCapturePaymentResponse = paypalService.capturePayment(
+            paypalCapturePaymentRequest
+        );
+        return CapturedPayment.builder()
+                .checkoutId(paypalCapturePaymentResponse.checkoutId())
+                .amount(paypalCapturePaymentResponse.amount())
+                .paymentFee(paypalCapturePaymentResponse.paymentFee())
+                .gatewayTransactionId(paypalCapturePaymentResponse.gatewayTransactionId())
+                .paymentMethod(PaymentMethod.valueOf(paypalCapturePaymentResponse.paymentMethod()))
+                .paymentStatus(PaymentStatus.valueOf(paypalCapturePaymentResponse.paymentStatus()))
+                .failureMessage(paypalCapturePaymentResponse.failureMessage())
+                .build();
+    }
+}
+
+
+== ./mapper/UpdatePaymentProviderMapper.java ==
+package com.yas.payment.mapper;
+
+import com.yas.commonlibrary.mapper.EntityCreateUpdateMapper;
+import com.yas.payment.model.PaymentProvider;
+import com.yas.payment.viewmodel.paymentprovider.PaymentProviderVm;
+import com.yas.payment.viewmodel.paymentprovider.UpdatePaymentVm;
+import org.mapstruct.Mapper;
+
+@Mapper(componentModel = "spring")
+public interface UpdatePaymentProviderMapper extends
+    EntityCreateUpdateMapper<PaymentProvider, UpdatePaymentVm, PaymentProviderVm> {
+}
+
+== ./mapper/PaymentProviderMapper.java ==
+package com.yas.payment.mapper;
+
+import com.yas.commonlibrary.mapper.BaseMapper;
+import com.yas.payment.model.PaymentProvider;
+import com.yas.payment.viewmodel.paymentprovider.PaymentProviderVm;
+import org.mapstruct.Mapper;
+
+@Mapper(componentModel = "spring")
+public interface PaymentProviderMapper extends BaseMapper<PaymentProvider, PaymentProviderVm> {
+}
+
+== ./mapper/CreatePaymentProviderMapper.java ==
+package com.yas.payment.mapper;
+
+import com.yas.commonlibrary.mapper.EntityCreateUpdateMapper;
+import com.yas.payment.model.PaymentProvider;
+import com.yas.payment.viewmodel.paymentprovider.CreatePaymentVm;
+import com.yas.payment.viewmodel.paymentprovider.PaymentProviderVm;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+
+@Mapper(componentModel = "spring")
+public interface CreatePaymentProviderMapper extends
+    EntityCreateUpdateMapper<PaymentProvider, CreatePaymentVm, PaymentProviderVm> {
+
+    @Mapping(target = "isNew", constant = "true")
+    @Override
+    PaymentProvider toModel(CreatePaymentVm vm);
+}
+
+== ./utils/Constants.java ==
+package com.yas.payment.utils;
+
+public final class Constants {
+    public final class ErrorCode {
+        public static final String PAYMENT_PROVIDER_NOT_FOUND = "PAYMENT_PROVIDER_NOT_FOUND";
+
+        private ErrorCode() {
+        }
+    }
+
+    public final class Message {
+        public static final String SUCCESS_MESSAGE = "SUCCESS";
+    }
+}
+
+
+== ./utils/MessagesUtils.java ==
+package com.yas.payment.utils;
+
+import java.util.Locale;
+import java.util.MissingResourceException;
+import java.util.ResourceBundle;
+import org.slf4j.helpers.FormattingTuple;
+import org.slf4j.helpers.MessageFormatter;
+
+public class MessagesUtils {
+
+    static ResourceBundle messageBundle = ResourceBundle.getBundle("messages.messages", Locale.getDefault());
+
+    public static String getMessage(String errorCode, Object... var2) {
+        String message;
+        try {
+            message = messageBundle.getString(errorCode);
+        } catch (MissingResourceException ex) {
+            // case message_code is not defined.
+            message = errorCode;
+        }
+        FormattingTuple formattingTuple = MessageFormatter.arrayFormat(message, var2);
+        return formattingTuple.getMessage();
+    }
+}
+
+
+== ./model/InitiatedPayment.java ==
+package com.yas.payment.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
+
+@AllArgsConstructor
+@Builder
+@Setter
+@Getter
+public class InitiatedPayment {
+    String status;
+    String paymentId;
+    String redirectUrl;
+}
+
+
+== ./model/PaymentProvider.java ==
+package com.yas.payment.model;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+import jakarta.persistence.Version;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.DynamicUpdate;
+import org.springframework.data.domain.Persistable;
+
+import com.yas.commonlibrary.model.AbstractAuditEntity;
+
+@DynamicUpdate
+@Entity
+@Table(name = "payment_provider")
+@lombok.Setter
+@lombok.Getter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class PaymentProvider extends AbstractAuditEntity implements Persistable<String> {
+    @Id
+    private String id;
+    private boolean enabled;
+    private String name;
+    private String configureUrl;
+    private String landingViewComponentName;
+    private String additionalSettings;
+    private Long mediaId;
+
+    @Version
+    private int version;
+
+    @Transient
+    private boolean isNew;
+
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+}
+
+== ./model/Payment.java ==
+package com.yas.payment.model;
+
+import com.yas.commonlibrary.model.AbstractAuditEntity;
+import com.yas.payment.model.enumeration.PaymentMethod;
+import com.yas.payment.model.enumeration.PaymentStatus;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import java.math.BigDecimal;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Entity
+@Table(name = "payment")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Payment extends AbstractAuditEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private Long orderId;
+
+    private String checkoutId;
+
+    private BigDecimal amount;
+
+    private BigDecimal paymentFee;
+
+    @Enumerated(EnumType.STRING)
+    private PaymentMethod paymentMethod;
+
+    @Enumerated(EnumType.STRING)
+    private PaymentStatus paymentStatus;
+
+    private String gatewayTransactionId;
+
+    private String failureMessage;
+
+    @SuppressWarnings("unused")
+    private String paymentProviderCheckoutId;
+
+}
+
+== ./model/CapturedPayment.java ==
+package com.yas.payment.model;
+
+import com.yas.payment.model.enumeration.PaymentMethod;
+import com.yas.payment.model.enumeration.PaymentStatus;
+import java.math.BigDecimal;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
+
+@AllArgsConstructor
+@Builder
+@Setter
+@Getter
+public class CapturedPayment {
+    Long orderId;
+    String checkoutId;
+    BigDecimal amount;
+    BigDecimal paymentFee;
+    String gatewayTransactionId;
+    PaymentMethod paymentMethod;
+    PaymentStatus paymentStatus;
+    String failureMessage;
+}
+
+
+== ./model/enumeration/PaymentMethod.java ==
+package com.yas.payment.model.enumeration;
+
+public enum PaymentMethod {
+    COD, BANKING, PAYPAL
+}
+
+
+== ./model/enumeration/PaymentStatus.java ==
+package com.yas.payment.model.enumeration;
+
+public enum PaymentStatus {
+    PENDING,
+    COMPLETED,
+    CANCELLED
+}
+
+
+== ./viewmodel/CapturePaymentRequestVm.java ==
+package com.yas.payment.viewmodel;
+
+import lombok.Builder;
+
+@Builder
+public record CapturePaymentRequestVm(String paymentMethod, String token) {
+}
+
+
+== ./viewmodel/InitPaymentRequestVm.java ==
+package com.yas.payment.viewmodel;
+
+import java.math.BigDecimal;
+import lombok.Builder;
+
+@Builder
+public record InitPaymentRequestVm(String paymentMethod, BigDecimal totalPrice, String checkoutId) {
+}
+
+== ./viewmodel/CapturePaymentResponseVm.java ==
+package com.yas.payment.viewmodel;
+
+import com.yas.payment.model.enumeration.PaymentMethod;
+import com.yas.payment.model.enumeration.PaymentStatus;
+import java.math.BigDecimal;
+import lombok.Builder;
+
+@Builder
+public record CapturePaymentResponseVm(
+        Long orderId,
+        String checkoutId,
+        BigDecimal amount,
+        BigDecimal paymentFee,
+        String gatewayTransactionId,
+        PaymentMethod paymentMethod,
+        PaymentStatus paymentStatus,
+        String failureMessage) {
+}
+
+== ./viewmodel/ErrorVm.java ==
+package com.yas.payment.viewmodel;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public record ErrorVm(String statusCode, String title, String detail, List<String> fieldErrors) {
+    public ErrorVm(String statusCode, String title, String detail) {
+        this(statusCode, title, detail, new ArrayList<>());
+    }
+}
+
+== ./viewmodel/InitPaymentResponseVm.java ==
+package com.yas.payment.viewmodel;
+
+import lombok.Builder;
+
+@Builder
+public record InitPaymentResponseVm(String status, String paymentId, String redirectUrl) {
+}
+
+
+== ./viewmodel/PaymentOrderStatusVm.java ==
+package com.yas.payment.viewmodel;
+
+import lombok.Builder;
+
+@Builder
+public record PaymentOrderStatusVm(
+        Long orderId,
+        String orderStatus,
+        Long paymentId,
+        String paymentStatus
+) {
+}
+
+
+== ./viewmodel/CheckoutStatusVm.java ==
+package com.yas.payment.viewmodel;
+
+public record CheckoutStatusVm(String checkoutId, String checkoutStatus) {
+}
+
+
+== ./viewmodel/paymentprovider/MediaVm.java ==
+package com.yas.payment.viewmodel.paymentprovider;
+
+import lombok.Builder;
+
+@Builder
+@lombok.Getter
+@lombok.Setter
+public class MediaVm {
+    private Long id;
+    private String caption;
+    private String fileName;
+    private String mediaType;
+    private String url;
+
+    public MediaVm(Long id, String caption, String fileName, String mediaType, String url) {
+        this.id = id;
+        this.caption = caption;
+        this.fileName = fileName;
+        this.mediaType = mediaType;
+        this.url = url;
+    }
+
+}
+
+== ./viewmodel/paymentprovider/PaymentProviderReqVm.java ==
+package com.yas.payment.viewmodel.paymentprovider;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotNull;
+
+@lombok.Getter
+@lombok.Setter
+public class PaymentProviderReqVm {
+
+    @NotNull
+    private String id;
+
+    private boolean enabled;
+
+    @NotNull
+    private String name;
+
+    @NotNull
+    private String configureUrl;
+
+    private String landingViewComponentName;
+
+    private String additionalSettings;
+
+    private Long mediaId;
+
+}
+
+== ./viewmodel/paymentprovider/UpdatePaymentVm.java ==
+package com.yas.payment.viewmodel.paymentprovider;
+
+@lombok.Getter
+@lombok.Setter
+public class UpdatePaymentVm extends PaymentProviderReqVm {}
+
+== ./viewmodel/paymentprovider/PaymentProviderVm.java ==
+package com.yas.payment.viewmodel.paymentprovider;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+
+@lombok.Getter
+@lombok.Setter
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class PaymentProviderVm {
+
+    private String id;
+    private String name;
+    private String configureUrl;
+    private int version;
+    private Long mediaId;
+    private String iconUrl;
+
+    public PaymentProviderVm(String id, String name, String configureUrl, int version, Long mediaId, String iconUrl) {
+        this.id = id;
+        this.name = name;
+        this.configureUrl = configureUrl;
+        this.version = version;
+        this.mediaId = mediaId;
+        this.iconUrl = iconUrl;
+    }
+}
+
+== ./viewmodel/paymentprovider/CreatePaymentVm.java ==
+package com.yas.payment.viewmodel.paymentprovider;
+
+@lombok.Getter
+@lombok.Setter
+public class CreatePaymentVm extends PaymentProviderReqVm {}
+
+== ./controller/PaymentController.java ==
+package com.yas.payment.controller;
+
+import com.yas.payment.service.PaymentService;
+import com.yas.payment.viewmodel.CapturePaymentRequestVm;
+import com.yas.payment.viewmodel.CapturePaymentResponseVm;
+import com.yas.payment.viewmodel.InitPaymentRequestVm;
+import com.yas.payment.viewmodel.InitPaymentResponseVm;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequiredArgsConstructor
+public class PaymentController {
+
+    private final PaymentService paymentService;
+
+    @PostMapping(value = "/init")
+    public InitPaymentResponseVm initPayment(@Valid @RequestBody InitPaymentRequestVm initPaymentRequestVm) {
+        return paymentService.initPayment(initPaymentRequestVm);
+    }
+
+    @PostMapping(value = "/capture")
+    public CapturePaymentResponseVm capturePayment(
+        @Valid @RequestBody CapturePaymentRequestVm capturePaymentRequestVm
+    ) {
+        return paymentService.capturePayment(capturePaymentRequestVm);
+    }
+
+    @GetMapping(value = "/cancel")
+    public ResponseEntity<String> cancelPayment() {
+        return ResponseEntity.ok("Payment cancelled");
+    }
+}
+
+
+== ./controller/PaymentProviderController.java ==
+package com.yas.payment.controller;
+
+import com.yas.payment.service.PaymentProviderService;
+import com.yas.payment.viewmodel.paymentprovider.CreatePaymentVm;
+import com.yas.payment.viewmodel.paymentprovider.PaymentProviderVm;
+import com.yas.payment.viewmodel.paymentprovider.UpdatePaymentVm;
+import jakarta.validation.Valid;
+import java.util.List;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class PaymentProviderController {
+
+    private final PaymentProviderService paymentProviderService;
+
+    public PaymentProviderController(PaymentProviderService paymentProviderService) {
+        this.paymentProviderService = paymentProviderService;
+    }
+
+    @PostMapping("/backoffice/payment-providers")
+    public ResponseEntity<PaymentProviderVm> create(@Valid @RequestBody CreatePaymentVm createPaymentVm) {
+        return ResponseEntity
+            .status(HttpStatus.CREATED)
+            .body(paymentProviderService.create(createPaymentVm));
+    }
+
+   @PutMapping("/backoffice/payment-providers")
+    public ResponseEntity<PaymentProviderVm> update(@Valid @RequestBody UpdatePaymentVm updatePaymentVm) {
+        return ResponseEntity.ok(paymentProviderService.update(updatePaymentVm));
+    }
+
+    @GetMapping("/storefront/payment-providers")
+    public ResponseEntity<List<PaymentProviderVm>> getAll(Pageable pageable) {
+        var paymentProviders = paymentProviderService.getEnabledPaymentProviders(pageable);
+        return ResponseEntity.ok(paymentProviders);
+    }
+
+}
+
