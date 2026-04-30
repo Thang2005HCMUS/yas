@@ -12,12 +12,16 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.client.RestClient;
 
-import java.net.URI;
 import java.util.function.Consumer;
 
-import static org.assertj.core.api.Assertions.assertThat;
+
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
+
+import org.springframework.http.HttpHeaders;
+
+import org.springframework.security.core.context.SecurityContext;
 
 class OrderServiceDeepTest {
     private RestClient restClient;
@@ -39,31 +43,43 @@ class OrderServiceDeepTest {
     }
 
     @Test
-    void updateCheckoutStatus_shouldExecuteHeaderLambda() {
-        when(config.order()).thenReturn("http://order");
-        
-        RestClient.RequestBodyUriSpec bodySpec = mock(RestClient.RequestBodyUriSpec.class);
-        RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
+    void updateCheckoutStatus_FullCoverage() throws Throwable {
+        RestClient restClient = mock(RestClient.class);
+        ServiceUrlConfig config = mock(ServiceUrlConfig.class);
+        OrderService service = new OrderService(restClient, config);
 
-        when(restClient.put()).thenReturn(bodySpec);
-        when(bodySpec.uri(any(URI.class))).thenReturn(bodySpec);
-        when(bodySpec.headers(any())).thenReturn(bodySpec);
-        when(bodySpec.body(any(CheckoutStatusVm.class))).thenReturn(bodySpec);
-        when(bodySpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.body(Long.class)).thenReturn(1L);
+        // Mock Security Context[cite: 3]
+        SecurityContext context = mock(SecurityContext.class);
+        Authentication auth = mock(Authentication.class);
+        Jwt jwt = mock(Jwt.class);
+        when(jwt.getTokenValue()).thenReturn("valid-token");
+        when(auth.getPrincipal()).thenReturn(jwt);
+        when(context.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(context);
+
+        when(config.order()).thenReturn("http://order-service");
+
+        // Mock RestClient Fluent API
+        RestClient.RequestBodyUriSpec uriSpec = mock(RestClient.RequestBodyUriSpec.class);
+        RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
+        
+        when(restClient.put()).thenReturn(uriSpec);
+        when(uriSpec.uri(any(java.net.URI.class))).thenReturn(uriSpec);
+        when(uriSpec.headers(any())).thenReturn(uriSpec);
+        when(uriSpec.body(any())).thenReturn(uriSpec);
+        when(uriSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(Long.class)).thenReturn(123L);
 
         CapturedPayment payment = CapturedPayment.builder()
-                .checkoutId("C1").paymentStatus(PaymentStatus.COMPLETED).build();
+                .checkoutId("CHK-01").paymentStatus(PaymentStatus.COMPLETED).build();
 
-        orderService.updateCheckoutStatus(payment);
+        service.updateCheckoutStatus(payment);
 
-        // Kiểm tra xem lambda headers có được gọi không
-        ArgumentCaptor<Consumer> headerCaptor = ArgumentCaptor.forClass(Consumer.class);
-        verify(bodySpec).headers(headerCaptor.capture());
-        
-        // Thực thi lambda thủ công để phủ code
-        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-        headerCaptor.getValue().accept(headers);
-        assertThat(headers.getFirst("Authorization")).contains("Bearer mock-token");
+        // Kích hoạt Lambda để phủ code
+        verify(uriSpec).headers(argThat(consumer -> {
+            HttpHeaders headers = new HttpHeaders();
+            ((Consumer<HttpHeaders>) consumer).accept(headers);
+            return headers.getFirst(HttpHeaders.AUTHORIZATION).contains("valid-token");
+        }));
     }
 }
