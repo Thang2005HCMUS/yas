@@ -1,0 +1,649 @@
+======script.py content ======:
+import os
+
+# File output
+OUTPUT_FILE = "content.txt"
+
+# Lấy thư mục hiện tại
+root_dir = os.getcwd()
+
+# Các file cần bỏ qua
+exclude_files = {OUTPUT_FILE}
+
+# Hàm đọc file text an toàn
+def read_file(filepath):
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            return f.read()
+    except UnicodeDecodeError:
+        try:
+            with open(filepath, "r", encoding="latin-1") as f:
+                return f.read()
+        except:
+            return "[Không thể đọc nội dung file]"
+    except Exception as e:
+        return f"[Lỗi khi đọc file: {e}]"
+
+# Ghi toàn bộ nội dung vào content.txt
+with open(OUTPUT_FILE, "w", encoding="utf-8") as output:
+    for foldername, subfolders, filenames in os.walk(root_dir):
+        for filename in filenames:
+            if filename in exclude_files:
+                continue
+
+            full_path = os.path.join(foldername, filename)
+
+            # Đường dẫn tương đối
+            relative_path = os.path.relpath(full_path, root_dir)
+
+            # Đọc nội dung file
+            content = read_file(full_path)
+
+            # Ghi ra file
+            output.write(f"======{relative_path} content ======:\n")
+            output.write(content)
+            output.write("\n\n")
+print()
+print(f"Đã ghi xong vào {OUTPUT_FILE}")
+
+======resources/logback-spring.xml content ======:
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/base.xml" />
+    <springProperty scope="context" name="appName" source="spring.application.name"/>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </root>
+</configuration>
+
+
+======resources/application.properties content ======:
+# Setting Spring context path & port
+server.servlet.context-path=/rating
+server.port=8089
+
+# Setting Spring profile
+spring.profiles.active=test
+
+spring.datasource.url=jdbc:h2:mem:testdb;NON_KEYWORDS=VALUE
+spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+
+spring.jpa.hibernate.ddl-auto=update
+spring.liquibase.enabled=false
+
+spring.security.oauth2.resourceserver.jwt.issuer-uri=test
+springdoc.oauthflow.authorization-url=test
+springdoc.oauthflow.token-url=test
+cors.allowed-origins=*
+
+cors.allowed-origins=*
+
+======resources/mockito-extensions/org.mockito.plugins.MockMaker content ======:
+mock-maker-inline
+
+======java/com/yas/rating/RatingApplicationTest.java content ======:
+package com.yas.rating;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest(useMainMethod = SpringBootTest.UseMainMethod.ALWAYS)
+class RatingApplicationTest {
+
+    @Test
+    void contextLoads() {
+        // It is suppose to be empty
+    }
+
+}
+
+
+======java/com/yas/rating/service/OrderServiceTest.java content ======:
+package com.yas.rating.service;
+
+import static com.yas.rating.util.SecurityContextUtils.setUpSecurityContext;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import com.yas.rating.config.ServiceUrlConfig;
+import com.yas.rating.viewmodel.OrderExistsByProductAndUserGetVm;
+import java.net.URI;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
+
+class OrderServiceTest {
+
+    private RestClient restClient;
+
+    private ServiceUrlConfig serviceUrlConfig;
+
+    private OrderService orderService;
+
+    private RestClient.ResponseSpec responseSpec;
+
+    private static final String ORDER_URL = "http://api.yas.local/order";
+
+    @BeforeEach
+    void setUp() {
+        restClient = mock(RestClient.class);
+        serviceUrlConfig = mock(ServiceUrlConfig.class);
+        orderService = new OrderService(restClient, serviceUrlConfig);
+        responseSpec = Mockito.mock(RestClient.ResponseSpec.class);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testCheckOrderExistsByProductAndUserWithStatus_whenNormalCase_returnOrderExistsByProductAndUserGetVm() {
+
+        when(serviceUrlConfig.order()).thenReturn(ORDER_URL);
+        URI url = UriComponentsBuilder
+            .fromUriString(serviceUrlConfig.order())
+            .path("/storefront/orders/completed")
+            .queryParam("productId", "1")
+            .buildAndExpand()
+            .toUri();
+
+        setUpSecurityContext("test");
+        RestClient.RequestHeadersUriSpec requestHeadersUriSpec = Mockito.mock(RestClient.RequestHeadersUriSpec.class);
+        when(restClient.get()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(url)).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.headers(any())).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
+
+        OrderExistsByProductAndUserGetVm orderExistsByProductAndUserGetVm
+            = new OrderExistsByProductAndUserGetVm(true);
+        when(responseSpec.body(OrderExistsByProductAndUserGetVm.class))
+            .thenReturn(orderExistsByProductAndUserGetVm);
+
+        OrderExistsByProductAndUserGetVm result = orderService.checkOrderExistsByProductAndUserWithStatus(1L);
+
+        assertThat(result.isPresent()).isTrue();
+
+    }
+
+    @Test
+    void testHandleFallback_whenNewOrderExistsByProductAndUserGetVm_returnOrderExistsByProductAndUserGetVm()
+        throws Throwable {
+
+        OrderExistsByProductAndUserGetVm result = orderService.handleFallback(mock(Throwable.class));
+        assertThat(result.isPresent()).isFalse();
+
+    }
+
+}
+
+======java/com/yas/rating/service/RatingServiceTest.java content ======:
+package com.yas.rating.service;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import com.yas.commonlibrary.exception.AccessDeniedException;
+import com.yas.commonlibrary.exception.NotFoundException;
+import com.yas.commonlibrary.exception.ResourceExistedException;
+import com.yas.rating.RatingApplication;
+import com.yas.rating.model.Rating;
+import com.yas.rating.repository.RatingRepository;
+import com.yas.rating.viewmodel.CustomerVm;
+import com.yas.rating.viewmodel.OrderExistsByProductAndUserGetVm;
+import com.yas.rating.viewmodel.RatingListVm;
+import com.yas.rating.viewmodel.RatingPostVm;
+import com.yas.rating.viewmodel.RatingVm;
+import java.time.ZonedDateTime;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+
+@SpringBootTest(classes = RatingApplication.class)
+class RatingServiceTest {
+
+    private final String userId = "user1";
+    @Autowired
+    private RatingRepository ratingRepository;
+    @MockitoBean
+    private CustomerService customerService;
+    @MockitoBean
+    private OrderService orderService;
+    @Autowired
+    private RatingService ratingService;
+
+    @BeforeEach
+    void setUp() {
+        List<Rating> ratingList = List.of(
+            Rating.builder()
+                .content("comment 1")
+                .ratingStar(4)
+                .productId(1L)
+                .productName("product1")
+                .firstName("Duy")
+                .lastName("Nguyen")
+                .build(),
+            Rating.builder()
+                .content("comment 2")
+                .ratingStar(2)
+                .productId(1L)
+                .productName("product1")
+                .firstName("Hai")
+                .lastName("Le")
+                .build(),
+            Rating.builder()
+                .content("comment 3")
+                .ratingStar(3)
+                .productId(2L)
+                .productName("product2")
+                .firstName("Cuong")
+                .lastName("Tran")
+                .build()
+        );
+        ratingRepository.saveAll(ratingList);
+    }
+
+    @AfterEach
+    void tearDown() {
+        ratingRepository.deleteAll();
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void getRatingList_ValidProductId_ShouldSuccess() {
+        int totalPage = 1;
+        int pageNo = 0;
+        int pageSize = 10;
+
+        RatingListVm actualResponse = ratingService.getRatingListByProductId(1L, pageNo, pageSize);
+        assertEquals(totalPage, actualResponse.totalPages());
+        assertEquals(2, actualResponse.totalElements());
+        assertEquals(2, actualResponse.ratingList().size());
+    }
+
+    @Test
+    void getRatingList_NotExistedProductId_ShouldReturnEmptyList() {
+        int pageNo = 0;
+        int pageSize = 10;
+
+        RatingListVm actualResponse = ratingService.getRatingListByProductId(0L, pageNo, pageSize);
+        assertEquals(0, actualResponse.ratingList().size());
+        assertEquals(0, actualResponse.totalPages());
+        assertEquals(0, actualResponse.totalElements());
+    }
+
+    @Test
+    void getRatingListWithFilter_ValidFilterData_ShouldReturnSuccess() {
+        String proName = "product2";
+        String firstName = "Cuong";
+        String lastName = "Tran";
+        String cusName = firstName + " " + lastName;
+        String message = "comment 3";
+        ZonedDateTime createdFrom = ZonedDateTime.now().minusDays(30);
+        ZonedDateTime createdTo = ZonedDateTime.now().plusDays(30);
+        int totalPage = 1;
+        int pageNo = 0;
+        int pageSize = 10;
+        RatingListVm actualResponse = ratingService.getRatingListWithFilter(proName, cusName, message, createdFrom, createdTo, pageNo, pageSize);
+        assertEquals(totalPage, actualResponse.totalPages());
+        assertEquals(1, actualResponse.totalElements());
+        assertEquals(proName, actualResponse.ratingList().getFirst().productName());
+        assertEquals(message, actualResponse.ratingList().getFirst().content());
+        assertEquals(firstName, actualResponse.ratingList().getFirst().firstName());
+        assertEquals(lastName, actualResponse.ratingList().getFirst().lastName());
+    }
+
+    @Test
+    void createRating_ValidRatingData_ShouldSuccess() {
+        Jwt jwt = mock(Jwt.class);
+        JwtAuthenticationToken authentication = mock(JwtAuthenticationToken.class);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        when(authentication.getToken()).thenReturn(jwt);
+        when(authentication.getName()).thenReturn(userId);
+        when(jwt.getSubject()).thenReturn(userId);
+        when(orderService.checkOrderExistsByProductAndUserWithStatus(anyLong())).
+                thenReturn(new OrderExistsByProductAndUserGetVm(true));
+        when(customerService.getCustomer()).thenReturn(new CustomerVm(userId, null, "Cuong", "Tran"));
+
+        RatingPostVm ratingPostVm = RatingPostVm.builder().content("comment 4").productName("product3").star(4).productId(3L).build();
+        RatingVm ratingVm = ratingService.createRating(ratingPostVm);
+        assertEquals(ratingPostVm.productName(), ratingVm.productName());
+        assertEquals(ratingPostVm.content(), ratingVm.content());
+        assertEquals(ratingPostVm.star(), ratingVm.star());
+    }
+
+    @Test
+    void createRating_InvalidAuthorization_ShouldThrowAccessDeniedException() {
+        RatingPostVm ratingPostVm = RatingPostVm.builder().content("comment 4").productName("product3").star(4).productId(3L).build();
+
+        Jwt jwt = mock(Jwt.class);
+        JwtAuthenticationToken authentication = mock(JwtAuthenticationToken.class);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        when(authentication.getToken()).thenReturn(jwt);
+        when(authentication.getName()).thenReturn(userId);
+        when(jwt.getSubject()).thenReturn(userId);
+        when(orderService.checkOrderExistsByProductAndUserWithStatus(anyLong())).thenReturn(new OrderExistsByProductAndUserGetVm(false));
+
+        AccessDeniedException exception = assertThrows(AccessDeniedException.class,
+                () -> ratingService.createRating(ratingPostVm));
+
+        assertEquals("ACCESS_DENIED", exception.getMessage());
+    }
+
+    @Test
+    void createRating_ExistedRating_ShouldThrowResourceExistedException() {
+        RatingPostVm ratingPostVm = RatingPostVm.builder().productId(1L).content("comment 4").productName("product3").star(4).build();
+
+        Jwt jwt = mock(Jwt.class);
+        JwtAuthenticationToken authentication = mock(JwtAuthenticationToken.class);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        when(authentication.getToken()).thenReturn(jwt);
+        when(authentication.getName()).thenReturn("");
+        when(jwt.getSubject()).thenReturn("");
+
+        when(orderService.checkOrderExistsByProductAndUserWithStatus(anyLong())).thenReturn(new OrderExistsByProductAndUserGetVm(true));
+
+        ResourceExistedException exception = assertThrows(ResourceExistedException.class,
+                () -> ratingService.createRating(ratingPostVm));
+
+        assertEquals("Resource already existed", exception.getMessage());
+    }
+
+    @Test
+    void deleteRating_ValidRatingId_ShouldSuccess() {
+        Long id = ratingRepository.findAll().getFirst().getId();
+        ratingService.deleteRating(id);
+        Optional<Rating> rating = ratingRepository.findById(id);
+        assertFalse(rating.isPresent());
+    }
+
+    @Test
+    void deleteRating_InvalidRatingId_ShouldThrowNotFoundException() {
+        NotFoundException exception = assertThrows(NotFoundException.class,
+                () -> ratingService.deleteRating(0L));
+        assertEquals("RATING 0 is not found", exception.getMessage());
+    }
+
+    @Test
+    void calculateAverageStar_ValidProductId_ShouldSuccess() {
+        Double averageStar = ratingService.calculateAverageStar(1L);
+        assertEquals(3, averageStar);
+    }
+
+    @Test
+    void calculateAverageStar_InvalidProductId_ShouldReturnZero() {
+        Double averageStar = ratingService.calculateAverageStar(0L);
+        assertEquals(0, averageStar);
+    }
+
+    @Test
+    void testGetLatestProducts_WhenHasListProductListVm_returnListProductListVm() {
+        List<Rating> list = ratingRepository.findAll();
+        list.sort(Comparator
+            .comparing(Rating::getCreatedOn, Comparator.reverseOrder())
+            .thenComparing(Rating::getId, Comparator.reverseOrder())
+        );
+
+        List<RatingVm> ratingList = ratingService.getLatestRatings(2);
+        assertEquals(2, ratingList.size());
+        assertEquals(list.getFirst().getContent(), ratingList.getFirst().content());
+        assertEquals(list.get(1).getContent(), ratingList.get(1).content());
+    }
+
+    @Test
+    void testGetLatestRatings_WhenCountLessThen1_returnEmpty() {
+        List<RatingVm>  newResponse = ratingService.getLatestRatings(-1);
+        assertEquals(0, newResponse.size());
+    }
+
+    @Test
+    void testGetLatestRatings_WhenCountIs0_returnEmpty() {
+        List<RatingVm>  newResponse = ratingService.getLatestRatings(0);
+        assertEquals(0, newResponse.size());
+    }
+
+    @Test
+    void testGetLatestRatings_WhenProductsEmpty_returnEmpty() {
+        ratingRepository.deleteAll();
+        List<RatingVm>  newResponse = ratingService.getLatestRatings(5);
+        assertEquals(0, newResponse.size());
+    }
+}
+
+======java/com/yas/rating/util/SecurityContextUtils.java content ======:
+package com.yas.rating.util;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+
+public class SecurityContextUtils {
+
+    private SecurityContextUtils() {
+    }
+
+    public static void setUpSecurityContext(String userName) {
+        Authentication auth = mock(Authentication.class);
+        when(auth.getName()).thenReturn(userName);
+        Jwt jwt = mock(Jwt.class);
+        when(auth.getPrincipal()).thenReturn(jwt);
+        when(jwt.getTokenValue()).thenReturn("token");
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(securityContext);
+    }
+
+}
+
+
+======java/com/yas/rating/controller/RatingControllerTest.java content ======:
+package com.yas.rating.controller;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import org.springframework.boot.security.oauth2.server.resource.autoconfigure.servlet.OAuth2ResourceServerAutoConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectWriter;
+import com.yas.commonlibrary.exception.NotFoundException;
+import com.yas.rating.service.RatingService;
+import com.yas.rating.utils.Constants;
+import com.yas.rating.viewmodel.RatingListVm;
+import com.yas.rating.viewmodel.RatingPostVm;
+import com.yas.rating.viewmodel.RatingVm;
+import com.yas.rating.viewmodel.ResponeStatusVm;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.List;
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+
+@WebMvcTest(controllers = RatingController.class,
+    excludeAutoConfiguration = OAuth2ResourceServerAutoConfiguration.class)
+@AutoConfigureMockMvc(addFilters = false)
+class RatingControllerTest {
+
+    @MockitoBean
+    private RatingService ratingService;
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    private ObjectWriter objectWriter;
+    private RatingVm ratingVm;
+
+    @BeforeEach
+    void setUp() {
+        objectWriter = new ObjectMapper().writer().withDefaultPrettyPrinter();
+        ratingVm = new RatingVm(1L, "rating1", 5, 1L, "product1", "nhat1", "Nhat", "Tran", ZonedDateTime.now());
+    }
+
+    @Test
+    void testGetRatingListWithFilter() throws Exception {
+        String productName = "product1";
+        String customerName = "Nhat Tran";
+        String message = "comment 1";
+        ZonedDateTime createdFrom = ZonedDateTime.of(
+                LocalDate.of(1970, 1, 1),
+                LocalTime.of(0, 0),
+                ZoneId.systemDefault());
+        ZonedDateTime createdTo = ZonedDateTime.now();
+
+        when(ratingService.getRatingListWithFilter(
+                anyString(),
+                anyString(),
+                anyString(),
+                any(ZonedDateTime.class),
+                any(ZonedDateTime.class),
+                anyInt(),
+                anyInt())).thenReturn(new RatingListVm(List.of(), 0, 0));
+
+        this.mockMvc.perform(get("/backoffice/ratings")
+                .contentType(MediaType.APPLICATION_JSON)
+                .param("productName", productName)
+                .param("customerName", customerName)
+                .param("message", message)
+                .param("createdFrom", createdFrom.toString())
+                .param("createdTo", createdTo.toString())
+                .param("pageNo", "0")
+                .param("pageSize", "10")
+        )
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void testDeleteRating_WhenValidId_ShouldReturn200() throws Exception {
+        when(ratingService.deleteRating(anyLong())).thenReturn(new ResponeStatusVm(
+                "Delete Rating",
+                Constants.Message.SUCCESS_MESSAGE,
+                HttpStatus.OK.toString())
+        );
+
+        this.mockMvc.perform(delete("/backoffice/ratings/{id}", 1)
+                .contentType(MediaType.APPLICATION_JSON)
+        )
+                .andExpect(status().isOk());
+
+        verify(ratingService, times(1)).deleteRating(anyLong());
+    }
+
+    @Test
+    void testDeleteRating_WhenInvalidId_ShouldReturn404() throws Exception {
+        when(ratingService.deleteRating(1L))
+                .thenThrow(new NotFoundException(Constants.ErrorCode.RATING_NOT_FOUND, 1L));
+        this.mockMvc.perform(delete("/backoffice/ratings/{id}", 1)
+                .contentType(MediaType.APPLICATION_JSON)
+        )
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.statusCode", Matchers.is("404 NOT_FOUND")))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.title", Matchers.is("Not Found")))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.detail", Matchers.is("RATING 1 is not found")));
+
+        verify(ratingService, times(1)).deleteRating(anyLong());
+    }
+
+    @Test
+    void testStorefrontGetRatingList_ShouldReturnList() throws Exception {
+        when(ratingService.getRatingListByProductId(anyLong(), anyInt(), anyInt()))
+                .thenReturn(new RatingListVm(List.of(), 0, 0));
+
+        this.mockMvc.perform(get("/storefront/ratings/products/{productId}", 1)
+                .contentType(MediaType.APPLICATION_JSON)
+                .param("pageNo", "0")
+                .param("pageSize", "10")
+        )
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void testCreateRating_WhenValid_ShouldSuccess() throws Exception {
+        RatingPostVm vm = new RatingPostVm("rating1", 5, 1L, "product1");
+
+        when(ratingService.createRating(any(RatingPostVm.class))).thenReturn(ratingVm);
+
+        this.mockMvc.perform(post("/storefront/ratings")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectWriter.writeValueAsString(vm))
+        )
+                .andExpect(status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.id", Matchers.is(1)));
+    }
+
+    @Test
+    void testGetAverageStarOfProduct_ShouldReturnSuccess() throws Exception {
+        when(ratingService.calculateAverageStar(anyLong())).thenReturn(0.0D);
+        this.mockMvc.perform(get("/storefront/ratings/product/{productId}/average-star", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+        )
+                .andExpect(status().isOk())
+                .andExpect(content().string("0.0"));
+    }
+
+    @Test
+    void testGetLatestRatings_WhenDataIsExisted_returnListRatingVm() throws Exception {
+
+        when(ratingService.getLatestRatings(1))
+            .thenReturn(List.of());
+
+        this.mockMvc.perform(get("/backoffice/ratings/latest/1")
+                .contentType(MediaType.APPLICATION_JSON)
+            ).andExpect(status().isOk());
+    }
+
+}
+
