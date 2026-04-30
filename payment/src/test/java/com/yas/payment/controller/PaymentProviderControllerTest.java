@@ -1,30 +1,30 @@
-package com.yas.payment.controller;
+// package com.yas.payment.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yas.payment.service.PaymentProviderService;
-import com.yas.payment.viewmodel.paymentprovider.CreatePaymentVm;
-import com.yas.payment.viewmodel.paymentprovider.PaymentProviderVm;
+// import com.fasterxml.jackson.databind.ObjectMapper;
+// import com.yas.payment.service.PaymentProviderService;
+// import com.yas.payment.viewmodel.paymentprovider.CreatePaymentVm;
+// import com.yas.payment.viewmodel.paymentprovider.PaymentProviderVm;
 
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Bean;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.http.MediaType;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.test.web.servlet.MockMvc;
+// import org.junit.jupiter.api.Disabled;
+// import org.junit.jupiter.api.Test;
+// import org.springframework.beans.factory.annotation.Autowired;
+// import org.springframework.boot.test.context.TestConfiguration;
+// import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+// import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+// import org.springframework.context.annotation.Bean;
+// import org.springframework.test.context.bean.override.mockito.MockitoBean;
+// import org.springframework.http.MediaType;
+// import org.springframework.security.web.SecurityFilterChain;
+// import org.springframework.test.web.servlet.MockMvc;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+// import static org.mockito.ArgumentMatchers.any;
+// import static org.mockito.Mockito.when;
+// import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+// import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(PaymentProviderController.class)
-@AutoConfigureMockMvc(addFilters = false)
-class PaymentProviderControllerTest {
+// @WebMvcTest(PaymentProviderController.class)
+// @AutoConfigureMockMvc(addFilters = false)
+// class PaymentProviderControllerTest {
 //     @Autowired
 //     private MockMvc mockMvc;
 
@@ -56,4 +56,4 @@ class PaymentProviderControllerTest {
 //                    .build();
 //     }
 // }
-//}
+// }
