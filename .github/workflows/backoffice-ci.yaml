@@ -4,16 +4,16 @@ on:
   push:
     branches: ["**"]
     paths:
-      - "payment/**"
+      - "backoffice/**"
       - ".github/workflows/actions/action.yaml"
-      - ".github/workflows/payment-ci.yaml"
+      - ".github/workflows/backoffice-ci.yaml"
       - "package.json"
   pull_request:
     branches: ["main"]
     paths:
-      - "payment/**"
+      - "backoffice/**"
       - ".github/workflows/actions/action.yaml"
-      - ".github/workflows/payment-ci.yaml"
+      - ".github/workflows/backoffice-ci.yaml"
       - "package.json"
   workflow_dispatch:
 
