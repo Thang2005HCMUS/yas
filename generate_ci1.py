@@ -38,6 +38,15 @@ jobs:
 
       - name: Run Maven Build Command
         run: mvn clean install -pl {service} -am -DskipTests
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-assets-{service}
+          path: |
+            **/target/*.jar
+            **/target/classes/
+            **/target/generated-sources/
+          retention-days: 1
 
       - name: Run Maven Checkstyle
         run: mvn checkstyle:checkstyle -pl {service} -am -Dcheckstyle.output.file={service}-checkstyle-result.xml
@@ -124,9 +133,8 @@ jobs:
           # Upload đúng file jacoco.xml từ folder site
           path: {service}/target/site/jacoco/jacoco.xml
           retention-days: 1
-
   SonarCloud:
-    needs: Test
+    needs: [Build, Test] # Cần cả Build để lấy class và Test để lấy Jacoco
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -134,35 +142,26 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/workflows/actions
 
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-assets-{service}
+
       - name: Download Jacoco Report
         uses: actions/download-artifact@v4
         with:
           name: jacoco-report-{service}
-          # Để SonarCloud đọc đúng, ta đặt vào đúng folder target của service
           path: {service}/target/site/jacoco/
 
       - name: Analyze with sonar cloud
         id: sonar
-        continue-on-error: true
         env:
           SONAR_TOKEN: ${{{{ secrets.SONAR_TOKEN }}}}
+        # Lưu ý: Không dùng 'clean' ở đây vì sẽ làm mất artifact vừa download
         run: >
           mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
           -pl {service} -am -f pom.xml
           -Dsonar.coverage.jacoco.xmlReportPaths={service}/target/site/jacoco/jacoco.xml
-
-      - name: SonarCloud Summary
-        if: always()
-        run: |
-          if [ "${{{{ steps.sonar.outcome }}}}" = "success" ]; then ICON="🟢"; STATUS="PASS"; else ICON="🔴"; STATUS="FAIL"; fi
-          {{
-            echo "## SonarCloud Report: {service}"
-            echo "| Item | Value |"
-            echo "|------|-------|"
-            echo "| Status | $ICON **$STATUS** |"
-            echo "### Dashboard"
-            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
-          }} >> $GITHUB_STEP_SUMMARY
 
   Check-Coverage:
     needs: Test
