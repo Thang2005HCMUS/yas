@@ -1,31 +1,23 @@
-
 package com.yas.sampledata.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yas.sampledata.service.SampleDataService;
 import com.yas.sampledata.viewmodel.SampleDataVm;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean; // Thư viện mới cho Spring Boot 4
 import org.springframework.test.web.servlet.MockMvc;
-import com.fasterxml.jackson.databind.ObjectMapper; // Đảm bảo đúng package Jackson
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(SampleDataController.class)
-@Import(SampleDataControllerTest.TestSecurityConfig.class)
 class SampleDataControllerTest {
 
     @Autowired
@@ -34,47 +26,35 @@ class SampleDataControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockitoBean
+    // Trong Spring Boot 4, dùng MockitoBean thay cho MockBean
+    @MockitoBean 
     private SampleDataService sampleDataService;
 
     @Test
-    void createSampleData_WhenValidRequest_ShouldReturnSuccess() throws Exception {
-        SampleDataVm response = new SampleDataVm("Insert Sample Data successfully!");
-        when(sampleDataService.createSampleData()).thenReturn(response);
+    @WithMockUser
+    void createSampleData_WhenValidRequest_ShouldReturnStatusOk() throws Exception {
+        // Given
+        SampleDataVm inputVm = new SampleDataVm("Start seeding");
+        SampleDataVm expectedResponse = new SampleDataVm("Insert Sample Data successfully!");
+        
+        when(sampleDataService.createSampleData()).thenReturn(expectedResponse);
 
-        SampleDataVm request = new SampleDataVm("run");
-
+        // When & Then
         mockMvc.perform(post("/storefront/sampledata")
+                        .with(csrf()) // Vẫn cần CSRF vì security config chưa tắt hoàn toàn
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(inputVm)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Insert Sample Data successfully!"));
     }
 
     @Test
-    void createSampleData_WhenEmptyBody_ShouldReturnBadRequest() throws Exception {
+    @WithMockUser
+    void createSampleData_WhenBodyIsMissing_ShouldReturnBadRequest() throws Exception {
+        // When & Then
         mockMvc.perform(post("/storefront/sampledata")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(""))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest());
-    }
-
-    @TestConfiguration
-    static class TestSecurityConfig {
-        @Bean
-        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-            return http
-                .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
-                .build();
-        }
-
-        @Bean
-        public JwtDecoder jwtDecoder() {
-            return token -> Jwt.withTokenValue(token)
-                    .header("alg", "none")
-                    .subject("test-user")
-                    .build();
-        }
     }
 }
