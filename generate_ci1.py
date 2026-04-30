@@ -85,32 +85,22 @@ jobs:
         if: always()
         run: |
           echo "## 🧪 Test Result: {service}" >> $GITHUB_STEP_SUMMARY
-          
-          # Tìm các file xml kết quả và cộng dồn stats
           TEST_FILES=$(find {service}/target/surefire-reports -name "TEST-*.xml" 2>/dev/null || true)
-          
           if [ -z "$TEST_FILES" ]; then
             echo "❌ Không tìm thấy file kết quả test." >> $GITHUB_STEP_SUMMARY
           else
-            TOTAL_TESTS=0
-            TOTAL_FAILURES=0
-            TOTAL_ERRORS=0
-            TOTAL_SKIPPED=0
-
+            TOTAL_TESTS=0; TOTAL_FAILURES=0; TOTAL_ERRORS=0; TOTAL_SKIPPED=0
             for FILE in $TEST_FILES; do
               TESTS=$(grep -oE 'tests="[0-9]+"' "$FILE" | cut -d'"' -f2 | head -1)
               FAILURES=$(grep -oE 'failures="[0-9]+"' "$FILE" | cut -d'"' -f2 | head -1)
               ERRORS=$(grep -oE 'errors="[0-9]+"' "$FILE" | cut -d'"' -f2 | head -1)
               SKIPPED=$(grep -oE 'skipped="[0-9]+"' "$FILE" | cut -d'"' -f2 | head -1)
-              
               TOTAL_TESTS=$((TOTAL_TESTS + TESTS))
               TOTAL_FAILURES=$((TOTAL_FAILURES + FAILURES))
               TOTAL_ERRORS=$((TOTAL_ERRORS + ERRORS))
               TOTAL_SKIPPED=$((TOTAL_SKIPPED + SKIPPED))
             done
-
             TOTAL_PASSED=$((TOTAL_TESTS - TOTAL_FAILURES - TOTAL_ERRORS - TOTAL_SKIPPED))
-
             echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
             echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
             echo "| ✅ Passed | $TOTAL_PASSED |" >> $GITHUB_STEP_SUMMARY
@@ -120,7 +110,7 @@ jobs:
             echo "| **Total** | **$TOTAL_TESTS** |" >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: Upload Jacoco Report for Coverage Job
+      - name: Upload Jacoco Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -136,13 +126,11 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/workflows/actions
-
       - name: Download Jacoco Report
         uses: actions/download-artifact@v4
         with:
           name: jacoco-report-{service}
           path: {service}/target/site/jacoco/
-
       - name: Analyze with sonar cloud
         id: sonar
         continue-on-error: true
@@ -152,27 +140,15 @@ jobs:
           mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
           -pl {service} -am -f pom.xml
           -Dsonar.coverage.jacoco.xmlReportPaths={service}/target/site/jacoco/jacoco.xml
-
       - name: SonarCloud Summary
         if: always()
         run: |
-          if [ "${{{{ steps.sonar.outcome }}}}" = "success" ]; then
-            ICON="🟢"
-            STATUS="PASS"
-          else
-            ICON="🔴"
-            STATUS="FAIL"
-          fi
-
+          if [ "${{{{ steps.sonar.outcome }}}}" = "success" ]; then ICON="🟢"; STATUS="PASS"; else ICON="🔴"; STATUS="FAIL"; fi
           {{
             echo "## SonarCloud Report: {service}"
-            echo ""
             echo "| Item | Value |"
             echo "|------|-------|"
             echo "| Status | $ICON **$STATUS** |"
-            echo "| Service | \`{service}\` |"
-            echo "| Commit | \`${{{{ github.sha }}}}\` |"
-            echo ""
             echo "### Dashboard"
             echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
           }} >> $GITHUB_STEP_SUMMARY
@@ -204,10 +180,17 @@ jobs:
       - name: Write Coverage Summary
         if: always()
         run: |
-          COVERAGE=${{{{ steps.jacoco_report.outputs.coverage-overall }}}}
-          THRESHOLD=70
+          # Lấy giá trị, nếu trống thì mặc định là 0
+          COVERAGE="${{{{ steps.jacoco_report.outputs.coverage-overall }}}}"
+          CHANGED="${{{{ steps.jacoco_report.outputs.coverage-changed-files }}}}"
           
-          if (( $(echo "$COVERAGE > $THRESHOLD" | bc -l) )); then
+          [ -z "$COVERAGE" ] && COVERAGE=0
+          [ -z "$CHANGED" ] && CHANGED=0
+          
+          THRESHOLD=80
+          
+          # So sánh số thực
+          if (( $(echo "$COVERAGE >= $THRESHOLD" | bc -l) )); then
             ICON="✅"
             STATUS="PASSED"
           else
@@ -215,22 +198,21 @@ jobs:
             STATUS="FAILED"
           fi
 
-          {{
-            echo "## 📊 Coverage Summary: {service}"
-            echo ""
-            echo "| Metric | Value | Threshold | Status |"
-            echo "|--------|-------|-----------|--------|"
-            echo "| Overall Coverage | $COVERAGE% | $THRESHOLD% | $ICON $STATUS |"
-            echo "| Changed Files | ${{{{ steps.jacoco_report.outputs.coverage-changed-files }}}}% | 60% | - |"
-            echo ""
-            echo "Vui lòng kiểm tra chi tiết trong phần bình luận của Pull Request."
-          }} >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Coverage Summary: {service}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value | Threshold | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Overall Coverage | $COVERAGE% | $THRESHOLD% | $ICON $STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Changed Files | $CHANGED% | 60% | - |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Vui lòng kiểm tra chi tiết trong phần bình luận của Pull Request." >> $GITHUB_STEP_SUMMARY
 
       - name: Enforce Threshold
         run: |
-          COVERAGE=${{{{ steps.jacoco_report.outputs.coverage-overall }}}}
-          if (( $(echo "$COVERAGE <= 70" | bc -l) )); then
-            echo "Độ bao phủ code ($COVERAGE%) thấp hơn yêu cầu (70%)!"
+          COVERAGE="${{{{ steps.jacoco_report.outputs.coverage-overall }}}}"
+          [ -z "$COVERAGE" ] && COVERAGE=0
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "Độ bao phủ code ($COVERAGE%) thấp hơn yêu cầu (80%)!"
             exit 1
           fi
 """
