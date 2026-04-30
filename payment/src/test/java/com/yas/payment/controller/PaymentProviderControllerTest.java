@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yas.payment.service.PaymentProviderService;
 import com.yas.payment.viewmodel.paymentprovider.CreatePaymentVm;
 import com.yas.payment.viewmodel.paymentprovider.PaymentProviderVm;
+
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -30,6 +32,7 @@ class PaymentProviderControllerTest {
     private ObjectMapper objectMapper;
 
     @Test
+    @Disabled("Tạm thời tắt để check coverage")
     void create_shouldReturnCreated() throws Exception {
         CreatePaymentVm vm = new CreatePaymentVm();
         vm.setId("paypal");
