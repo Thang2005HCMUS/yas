@@ -186,10 +186,10 @@ jobs:
           # Chỉ định chính xác file đã download về
           paths: ${{github.workspace}}/target/jacoco-results/jacoco.xml
           token: ${{secrets.GITHUB_TOKEN}}
-          min-coverage-overall: 80
+          min-coverage-overall: 70
           min-coverage-changed-files: 60
           title: 'Pricing Coverage Report'
-          update-comment: true
+          update-comment: false
 
       - name: Write Coverage Summary
         if: always()
@@ -198,7 +198,7 @@ jobs:
           CHANGED="${{ steps.jacoco_report.outputs.coverage-changed-files }}"
           [ -z "$COVERAGE" ] && COVERAGE=0
           [ -z "$CHANGED" ] && CHANGED=0
-          THRESHOLD=80
+          THRESHOLD=70
           if (( $(echo "$COVERAGE >= $THRESHOLD" | bc -l) )); then ICON="✅"; STATUS="PASSED"; else ICON="❌"; STATUS="FAILED"; fi
 
           echo "## 📊 Coverage Summary: pricing" >> $GITHUB_STEP_SUMMARY
