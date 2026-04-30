@@ -206,3 +206,11 @@ jobs:
           echo "|--------|-------|-----------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Overall Coverage | $COVERAGE% | $THRESHOLD% | $ICON $STATUS |" >> $GITHUB_STEP_SUMMARY
           echo "| Changed Files | $CHANGED% | 60% | - |" >> $GITHUB_STEP_SUMMARY
+      - name: Enforce Threshold
+        run: |
+          THRESHOLD=70
+          COVERAGE=${{ steps.jacoco_report.outputs.coverage-overall }}
+          if (( $(echo "$COVERAGE <= $THRESHOLD" | bc -l) )); then
+            echo "Độ bao phủ code ($COVERAGE%) thấp hơn yêu cầu ($THRESHOLD%)!"
+            exit 1
+          fi
