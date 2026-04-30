@@ -4,7 +4,7 @@ import os
 JAVA_SERVICES = [
     "search", "promotion", "customer", "inventory", "payment", "order", 
     "tax", "rating", "location", "storefront-bff", "backoffice-bff", 
-    "pricing", "product", "media", "payment-paypal", "webhook", "sampledata", "cart", "recommendation"
+    "backoffice", "product", "media", "payment-paypal", "webhook", "sampledata", "cart", "recommendation"
 ]
 
 TEMPLATE = """name: {service} service ci
