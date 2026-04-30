@@ -8,10 +8,13 @@ import com.yas.payment.viewmodel.paymentprovider.PaymentProviderVm;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -32,7 +35,6 @@ class PaymentProviderControllerTest {
     private ObjectMapper objectMapper;
 
     @Test
-    @Disabled("Tạm thời tắt để check coverage")
     void create_shouldReturnCreated() throws Exception {
         CreatePaymentVm vm = new CreatePaymentVm();
         vm.setId("paypal");
@@ -45,4 +47,13 @@ class PaymentProviderControllerTest {
                 .content(objectMapper.writeValueAsString(vm)))
                 .andExpect(status().isCreated());
     }
+    @TestConfiguration
+static class TestSecurityConfig {
+    @Bean
+    public SecurityFilterChain securityFilterChain(org.springframework.security.config.annotation.web.builders.HttpSecurity http) throws Exception {
+        return http.csrf(csrf -> csrf.disable())
+                   .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                   .build();
+    }
+}
 }
