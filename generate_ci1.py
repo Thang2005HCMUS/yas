@@ -162,6 +162,18 @@ jobs:
           mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
           -pl {service} -am -f pom.xml
           -Dsonar.coverage.jacoco.xmlReportPaths={service}/target/site/jacoco/jacoco.xml
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{{{ steps.sonar.outcome }}}}" = "success" ]; then ICON="🟢"; STATUS="PASS"; else ICON="🔴"; STATUS="FAIL"; fi
+          {{
+            echo "## SonarCloud Report: {service}"
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+          }} >> $GITHUB_STEP_SUMMARY
 
   Check-Coverage:
     needs: Test
