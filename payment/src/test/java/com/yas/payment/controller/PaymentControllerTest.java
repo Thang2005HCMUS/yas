@@ -26,9 +26,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.web.SecurityFilterChain;
 
-@WebMvcTest(PaymentController.class)
-@AutoConfigureMockMvc(addFilters = false) // Tắt bộ lọc Security để tập trung test logic Controller
+
+@WebMvcTest(PaymentController.class)// Tắt bộ lọc Security để tập trung test logic Controller
 class PaymentControllerTest {
 
     @Autowired
@@ -39,7 +43,16 @@ class PaymentControllerTest {
 
     @MockitoBean
     private PaymentService paymentService;
-
+    @TestConfiguration
+    static class TestSecurityConfig {
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+            return http
+                .csrf(csrf -> csrf.disable()) //
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .build();
+        }
+    }
     @Test
     void initPayment_ShouldReturnOk() throws Exception {
         // Given
