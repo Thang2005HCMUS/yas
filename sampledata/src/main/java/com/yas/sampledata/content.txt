@@ -1,0 +1,340 @@
+== ./SampleDataApplication.java ==
+package com.yas.sampledata;
+
+import com.yas.commonlibrary.config.CorsConfig;
+import com.yas.commonlibrary.config.ServiceUrlConfig;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+
+@SpringBootApplication(exclude = {DataSourceAutoConfiguration.class},
+    scanBasePackages = {"com.yas.sampledata", "com.yas.commonlibrary"})
+@EnableConfigurationProperties({ServiceUrlConfig.class, CorsConfig.class})
+public class SampleDataApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(SampleDataApplication.class, args);
+    }
+}
+
+== ./config/DataSourceConfig.java ==
+package com.yas.sampledata.config;
+
+import javax.sql.DataSource;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.boot.jdbc.DataSourceBuilder;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.jdbc.core.JdbcTemplate;
+
+@Configuration
+@ConfigurationPropertiesScan
+public class DataSourceConfig {
+
+    @Value("${spring.datasource.product.url}")
+    protected String productUrl;
+    @Value("${spring.datasource.media.url}")
+    protected String mediaUrl;
+
+    @Value("${spring.datasource.username}")
+    protected String username;
+    @Value("${spring.datasource.password}")
+    protected String password;
+    @Value("${spring.datasource.driver-class-name}")
+    protected String driverClassName;
+
+    @Bean(name = "productDataSource")
+    @Primary
+    public DataSource productDataSource() {
+        return DataSourceBuilder.create()
+            .driverClassName(driverClassName)
+            .url(productUrl)
+            .username(username)
+            .password(password)
+            .build();
+    }
+
+    @Bean(name = "mediaDataSource")
+    public DataSource mediaDataSource() {
+        return DataSourceBuilder.create()
+            .driverClassName(driverClassName)
+            .url(mediaUrl)
+            .username(username)
+            .password(password)
+            .build();
+    }
+
+    @Primary
+    @Bean(name = "jdbcProduct")
+    public JdbcTemplate jdbcProduct(@Qualifier("productDataSource") DataSource productDataSource) {
+        return new JdbcTemplate(productDataSource);
+    }
+
+    @Bean(name = "jdbcMedia")
+    public JdbcTemplate jdbcMedia(@Qualifier("mediaDataSource") DataSource mediaDataSource) {
+        return new JdbcTemplate(mediaDataSource);
+    }
+
+}
+
+== ./config/RestClientConfig.java ==
+package com.yas.sampledata.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestClient;
+
+@Configuration
+public class RestClientConfig {
+
+    @Bean
+    public RestClient restClient() {
+        return RestClient.builder().build();
+    }
+
+}
+
+
+== ./config/SwaggerConfig.java ==
+package com.yas.sampledata.config;
+
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
+import io.swagger.v3.oas.annotations.info.Info;
+import io.swagger.v3.oas.annotations.security.OAuthFlow;
+import io.swagger.v3.oas.annotations.security.OAuthFlows;
+import io.swagger.v3.oas.annotations.security.OAuthScope;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import io.swagger.v3.oas.annotations.servers.Server;
+
+@OpenAPIDefinition(info = @Info(title = "Sampledata Service API", description = "Sampledata API documentation",
+    version = "1.0"), security = @SecurityRequirement(name = "oauth2_bearer"),
+    servers = {@Server(url = "${server.servlet.context-path}", description = "Default Server URL")})
+@SecurityScheme(name = "oauth2_bearer", type = SecuritySchemeType.OAUTH2,
+    flows = @OAuthFlows(authorizationCode = @OAuthFlow(authorizationUrl = "${springdoc.oauthflow.authorization-url}",
+        tokenUrl = "${springdoc.oauthflow.token-url}", scopes = {
+            @OAuthScope(name = "openid", description = "openid")})))
+public class SwaggerConfig {
+}
+
+== ./config/SecurityConfig.java ==
+package com.yas.sampledata.config;
+
+import java.util.Collection;
+import java.util.Map;
+import java.util.stream.Collectors;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+public class SecurityConfig {
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
+        return http
+            .csrf(csrf -> csrf
+                .ignoringRequestMatchers("/storefront/sampledata") // Disable CSRF for these paths
+            )
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/sampledata/**").permitAll()
+                .requestMatchers("/actuator/prometheus", "/actuator/health/**",
+                    "/swagger-ui", "/swagger-ui/**", "/error", "/v3/api-docs/**").permitAll()
+                .requestMatchers("/storefront/**").permitAll()
+                .requestMatchers("/backoffice/**").hasRole("ADMIN")
+                .anyRequest().authenticated())
+            .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
+            .build();
+    }
+
+    @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverterForKeycloak() {
+        Converter<Jwt, Collection<GrantedAuthority>> jwtGrantedAuthoritiesConverter = jwt -> {
+            Map<String, Collection<String>> realmAccess = jwt.getClaim("realm_access");
+            Collection<String> roles = realmAccess.get("roles");
+            return roles.stream()
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                .collect(Collectors.toList());
+        };
+
+        var jwtAuthenticationConverter = new JwtAuthenticationConverter();
+        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwtGrantedAuthoritiesConverter);
+
+        return jwtAuthenticationConverter;
+    }
+}
+
+
+== ./service/SampleDataService.java ==
+package com.yas.sampledata.service;
+
+import com.yas.sampledata.utils.SqlScriptExecutor;
+import com.yas.sampledata.viewmodel.SampleDataVm;
+import javax.sql.DataSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@Transactional
+public class SampleDataService {
+    private final DataSource productDataSource;
+    private final DataSource mediaDataSource;
+
+    @Autowired
+    public SampleDataService(@Qualifier("productDataSource") DataSource productDataSource,
+                     @Qualifier("mediaDataSource") DataSource mediaDataSource) {
+        this.productDataSource = productDataSource;
+        this.mediaDataSource = mediaDataSource;
+    }
+
+    public SampleDataVm createSampleData() {
+        SqlScriptExecutor executor = new SqlScriptExecutor();
+        executor.executeScriptsForSchema(productDataSource, "public", "classpath*:db/product/*.sql");
+        executor.executeScriptsForSchema(mediaDataSource, "public", "classpath*:db/media/*.sql");
+        return new SampleDataVm("Insert Sample Data successfully!");
+    }
+}
+
+
+== ./utils/SqlScriptExecutor.java ==
+package com.yas.sampledata.utils;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+import javax.sql.DataSource;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.jdbc.datasource.init.ScriptUtils;
+import org.springframework.stereotype.Component;
+
+@Component
+@Slf4j
+public class SqlScriptExecutor {
+
+    public void executeScriptsForSchema(DataSource dataSource, String schema, String locationPattern) {
+        PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+        try {
+            Resource[] resources = resolver.getResources(locationPattern);
+
+            for (Resource resource : resources) {
+                executeSqlScript(dataSource, schema, resource);
+            }
+        } catch (Exception e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void executeSqlScript(DataSource dataSource, String schema, Resource resource) {
+        try (Connection connection = dataSource.getConnection()) {
+            connection.setSchema(schema); // Set the schema
+            ScriptUtils.executeSqlScript(connection, resource);
+            log.info("Executed script: " + resource.getFilename() + " on schema: " + schema);
+        } catch (SQLException e) {
+            log.error(e.getMessage());
+        }
+    }
+}
+
+== ./utils/MessagesUtils.java ==
+package com.yas.sampledata.utils;
+
+import java.util.Locale;
+import java.util.MissingResourceException;
+import java.util.ResourceBundle;
+import org.slf4j.helpers.FormattingTuple;
+import org.slf4j.helpers.MessageFormatter;
+
+public class MessagesUtils {
+
+    static ResourceBundle messageBundle = ResourceBundle.getBundle("messages.messages", Locale.getDefault());
+
+    public static String getMessage(String errorCode, Object... var2) {
+        String message;
+        try {
+            message = messageBundle.getString(errorCode);
+        } catch (MissingResourceException ex) {
+            // case message_code is not defined.
+            message = errorCode;
+        }
+        FormattingTuple formattingTuple = MessageFormatter.arrayFormat(message, var2);
+        return formattingTuple.getMessage();
+    }
+}
+
+
+== ./viewmodel/ErrorVm.java ==
+package com.yas.sampledata.viewmodel;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public record ErrorVm(String statusCode, String title, String detail, List<String> fieldErrors) {
+    public ErrorVm(String statusCode, String title, String detail) {
+        this(statusCode, title, detail, new ArrayList<>());
+    }
+}
+
+
+== ./viewmodel/SampleDataVm.java ==
+package com.yas.sampledata.viewmodel;
+
+public record SampleDataVm(String message) {
+}
+
+
+== ./controller/SampleDataController.java ==
+package com.yas.sampledata.controller;
+
+import com.yas.sampledata.service.SampleDataService;
+import com.yas.sampledata.viewmodel.ErrorVm;
+import com.yas.sampledata.viewmodel.SampleDataVm;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.validation.Valid;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+@Validated
+@RestController
+public class SampleDataController {
+    private final SampleDataService sampleDataService;
+
+    public SampleDataController(SampleDataService sampleDataService) {
+        this.sampleDataService = sampleDataService;
+    }
+
+    @PostMapping("/storefront/sampledata")
+    @Operation(summary = "Add product to shopping sampleData. "
+        + "When no sampleData exists, this will create a new sampleData.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Created",
+            content = @Content(schema = @Schema(implementation = SampleDataVm.class))),
+        @ApiResponse(responseCode = "400", description = "Bad request",
+            content = @Content(schema = @Schema(implementation = ErrorVm.class)))})
+    public SampleDataVm createSampleData(@RequestBody @Valid SampleDataVm sampleDataVm) {
+        return sampleDataService.createSampleData();
+    }
+}
+
+
