@@ -1,6 +1,7 @@
 package com.yas.storefrontbff.controller;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -40,6 +41,6 @@ class AuthenticationControllerTest {
         assertNotNull(response.getBody());
         assertTrue(response.getBody().isAuthenticated());
         assertNotNull(response.getBody().authenticatedUser());
-        assertTrue("member3".equals(response.getBody().authenticatedUser().username()));
+        assertEquals("member3", response.getBody().authenticatedUser().username());
     }
 }
