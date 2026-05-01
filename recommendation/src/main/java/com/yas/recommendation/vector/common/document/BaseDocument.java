@@ -41,7 +41,11 @@ public abstract class BaseDocument {
         );
         Assert.notNull(content, "Document's content cannot be null");
         Assert.notNull(metadata, "Document's metadata cannot be null");
-        Document document = new Document(content, metadata, idGenerator);
+        Document document = Document.builder()
+            .text(content)
+            .metadata(metadata)
+            .idGenerator(idGenerator)
+            .build();
         document.setContentFormatter(contentFormatter == null ? DEFAULT_CONTENT_FORMATTER : contentFormatter);
         return document;
     }

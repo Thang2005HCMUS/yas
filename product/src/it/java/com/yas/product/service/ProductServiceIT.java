@@ -47,8 +47,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest
+@Testcontainers(disabledWithoutDocker = true)
 @Import(IntegrationTestConfiguration.class)
 class ProductServiceIT {
     private final ZonedDateTime CREATED_ON = ZonedDateTime.now();
