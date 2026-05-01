@@ -247,6 +247,69 @@ class CartItemServiceTest {
             assertEquals(1, cartItemGetVms.size());
             assertEquals(expectedQuantity, cartItemGetVms.getFirst().quantity());
         }
+
+        @Test
+        void testDeleteOrAdjustCartItem_whenDeleteQuantityEqualsCartItemQuantity_shouldDeleteCartItem() {
+            CartItemDeleteVm cartItemDeleteVm = new CartItemDeleteVm(PRODUCT_ID_SAMPLE, 1);
+            CartItem existingCartItem = CartItem.builder()
+                .customerId(CURRENT_USER_ID_SAMPLE)
+                .productId(PRODUCT_ID_SAMPLE)
+                .quantity(1)
+                .build();
+
+            mockCurrentUserId(CURRENT_USER_ID_SAMPLE);
+            when(cartItemRepository.findByCustomerIdAndProductIdIn(any(), any())).thenReturn(List.of(existingCartItem));
+
+            List<CartItemGetVm> cartItemGetVms = cartItemService.deleteOrAdjustCartItem(List.of(cartItemDeleteVm));
+
+            verify(cartItemRepository).deleteAll(List.of(existingCartItem));
+            assertEquals(0, cartItemGetVms.size());
+        }
+
+        @Test
+        void testDeleteOrAdjustCartItem_whenDuplicateEntriesSameQuantity_shouldProceed() {
+            CartItemDeleteVm first = new CartItemDeleteVm(PRODUCT_ID_SAMPLE, 1);
+            CartItemDeleteVm second = new CartItemDeleteVm(PRODUCT_ID_SAMPLE, 1);
+            CartItem existingCartItem = CartItem.builder()
+                .customerId(CURRENT_USER_ID_SAMPLE)
+                .productId(PRODUCT_ID_SAMPLE)
+                .quantity(2)
+                .build();
+
+            mockCurrentUserId(CURRENT_USER_ID_SAMPLE);
+            when(cartItemRepository.findByCustomerIdAndProductIdIn(any(), any())).thenReturn(List.of(existingCartItem));
+            when(cartItemRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+            List<CartItemGetVm> result = cartItemService.deleteOrAdjustCartItem(List.of(first, second));
+
+            assertEquals(1, result.size());
+            assertEquals(1, result.getFirst().quantity());
+        }
+
+        @Test
+        void testDeleteOrAdjustCartItem_whenCartItemDoesNotExist_shouldReturnEmpty() {
+            CartItemDeleteVm cartItemDeleteVm = new CartItemDeleteVm(PRODUCT_ID_SAMPLE, 1);
+            mockCurrentUserId(CURRENT_USER_ID_SAMPLE);
+            when(cartItemRepository.findByCustomerIdAndProductIdIn(any(), any())).thenReturn(List.of());
+            when(cartItemRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+            List<CartItemGetVm> result = cartItemService.deleteOrAdjustCartItem(List.of(cartItemDeleteVm));
+
+            assertEquals(0, result.size());
+        }
+    }
+
+    @Nested
+    class DeleteCartItemTest {
+
+        @Test
+        void testDeleteCartItem_shouldDeleteByCurrentUserAndProduct() {
+            mockCurrentUserId(CURRENT_USER_ID_SAMPLE);
+
+            cartItemService.deleteCartItem(PRODUCT_ID_SAMPLE);
+
+            verify(cartItemRepository).deleteByCustomerIdAndProductId(CURRENT_USER_ID_SAMPLE, PRODUCT_ID_SAMPLE);
+        }
     }
 
     private void mockCurrentUserId(String userIdToMock) {
