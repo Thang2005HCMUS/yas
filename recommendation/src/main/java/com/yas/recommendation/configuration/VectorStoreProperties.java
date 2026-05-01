@@ -2,7 +2,7 @@ package com.yas.recommendation.configuration;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.ai.vectorstore.PgVectorStore;
+import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @Getter
