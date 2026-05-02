@@ -36,6 +36,7 @@ jobs:
       - run: npx prettier --check .
         working-directory: backoffice
       - name: SonarCloud Scan
+        id: sonar
         uses: SonarSource/sonarcloud-github-action@v5
         with:
           projectBaseDir: backoffice
