@@ -1,0 +1,38 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - name: Run Test
+        run: mvn clean test
+
+      - name: Generate Coverage
+        run: mvn jacoco:report
+
+      - name: Check Coverage >= 70%
+        run: |
+          COVERAGE=$(grep -o 'TOTAL.*' target/site/jacoco/index.html | sed -E 's/.*>([0-9]+)%<.*/\1/')
+          echo "Coverage: $COVERAGE%"
+          if [ "$COVERAGE" -lt 70 ]; then
+            echo "Coverage < 70%, FAIL!"
+            exit 1
+          fi
+
+      - name: Build
+        run: mvn clean package
