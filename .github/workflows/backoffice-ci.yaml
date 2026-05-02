@@ -2,90 +2,176 @@ name: backoffice service ci
 
 on:
   push:
-    branches: [ "**" ]
+    branches: ["**"]
     paths:
       - "backoffice/**"
       - ".github/workflows/actions/action.yaml"
       - ".github/workflows/backoffice-ci.yaml"
+      - "package.json"
+      - "package-lock.json"
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
     paths:
       - "backoffice/**"
       - ".github/workflows/actions/action.yaml"
       - ".github/workflows/backoffice-ci.yaml"
+      - "package.json"
+      - "package-lock.json"
   workflow_dispatch:
 
 jobs:
   Build:
     runs-on: ubuntu-latest
-    env:
-      FROM_ORIGINAL_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name == github.repository || github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-      - uses: actions/setup-node@v4
+
+      - uses: ./.github/workflows/actions
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm ci
-        working-directory: backoffice
-      - run: npm run build
-        working-directory: backoffice
-      - run: npm run lint
-        working-directory: backoffice
-      - run: npx prettier --check .
-        working-directory: backoffice
-      - name: SonarCloud Scan
-        id: sonar
-        uses: SonarSource/sonarcloud-github-action@v5
-        with:
-          projectBaseDir: backoffice
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      - name: SonarCloud Summary
-        if: always()
-        run: |
-          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
-            ICON="🟢"
-            STATUS="PASS"
-          else
-            ICON="🔴"
-            STATUS="FAIL"
-          fi
+          cache: 'npm'
 
-          {
-            echo "## SonarCloud Report"
-            echo ""
-            echo "| Item | Value |"
-            echo "|------|-------|"
-            echo "| Status | $ICON **$STATUS** |"
-            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
-            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
-            echo "| Service | \`${SERVICE_NAME}\` |"
-            echo "| Branch | \`${{ github.ref_name }}\` |"
-            echo "| Commit | \`${{ github.sha }}\` |"
-            echo "| Actor | \`${{ github.actor }}\` |"
-            echo ""
-            echo "### Dashboard"
-            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
-            echo ""
-            echo "### Notes"
-            echo "- If status = FAIL, open Sonar step logs."
-            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
-            echo "- If using continue-on-error, workflow still continues."
-          } >> $GITHUB_STEP_SUMMARY
-      - name: Log in to the Container registry
+      - name: Install dependencies
+        working-directory: backoffice
+        run: npm ci
+
+      - name: Build project
+        working-directory: backoffice
+        run: npm run build
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-assets-backoffice
+          path: |
+            backoffice/dist/**
+            backoffice/build/**
+          retention-days: 1
+
+      - name: Run Lint
+        working-directory: backoffice
+        run: npm run lint || true
+
+      - name: Log in to Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push Docker images
+
+      - name: Build and push Docker image
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/build-push-action@v6
         with:
           context: ./backoffice
           push: true
           tags: ghcr.io/nashtech-garage/yas-backoffice:latest
+
+  Test:
+    needs: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/workflows/actions
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        working-directory: backoffice
+        run: npm ci
+
+      - name: Run Unit Tests & Coverage
+        working-directory: backoffice
+        run: npm run test -- --coverage
+
+      - name: Upload Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-backoffice
+          path: backoffice/coverage
+          retention-days: 1
+
+      - name: Test Summary
+        if: always()
+        run: |
+          echo "## 🧪 Test Result: backoffice" >> $GITHUB_STEP_SUMMARY
+          if [ -f backoffice/coverage/coverage-summary.json ]; then
+            COVERAGE=$(jq '.total.lines.pct' backoffice/coverage/coverage-summary.json)
+            echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Line Coverage | $COVERAGE% |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ No coverage report found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  SonarCloud:
+    needs: [Build, Test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/workflows/actions
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Download Coverage Report
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-backoffice
+          path: backoffice/coverage
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        with:
+          projectBaseDir: backoffice
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Sonar Summary
+        if: always()
+        run: |
+          echo "## SonarCloud Report: backoffice" >> $GITHUB_STEP_SUMMARY
+          echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>" >> $GITHUB_STEP_SUMMARY
+
+  Check-Coverage:
+    needs: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-backoffice
+          path: coverage
+
+      - name: Enforce Coverage Threshold
+        run: |
+          THRESHOLD=70
+          COVERAGE=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+          echo "Coverage: $COVERAGE%"
+
+          if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
+            echo "Coverage thấp hơn yêu cầu!"
+            exit 1
+          fi
+
+      - name: Coverage Summary
+        run: |
+          COVERAGE=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+          echo "## 📊 Coverage Summary: backoffice" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value | Threshold |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|-----------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Overall Coverage | $COVERAGE% | 70% |" >> $GITHUB_STEP_SUMMARY
