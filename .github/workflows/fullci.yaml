@@ -1,0 +1,184 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  # 🔍 Detect changed services
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      search: ${{ steps.filter.outputs.search }}
+      promotion: ${{ steps.filter.outputs.promotion }}
+      customer: ${{ steps.filter.outputs.customer }}
+      inventory: ${{ steps.filter.outputs.inventory }}
+      payment: ${{ steps.filter.outputs.payment }}
+      order: ${{ steps.filter.outputs.order }}
+      tax: ${{ steps.filter.outputs.tax }}
+      rating: ${{ steps.filter.outputs.rating }}
+      location: ${{ steps.filter.outputs.location }}
+      storefront_bff: ${{ steps.filter.outputs.storefront-bff }}
+      backoffice_bff: ${{ steps.filter.outputs.backoffice-bff }}
+      product: ${{ steps.filter.outputs.product }}
+      media: ${{ steps.filter.outputs.media }}
+      payment_paypal: ${{ steps.filter.outputs.payment-paypal }}
+      webhook: ${{ steps.filter.outputs.webhook }}
+      cart: ${{ steps.filter.outputs.cart }}
+      recommendation: ${{ steps.filter.outputs.recommendation }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect changed services
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            search:
+              - 'search/**'
+            promotion:
+              - 'promotion/**'
+            customer:
+              - 'customer/**'
+            inventory:
+              - 'inventory/**'
+            payment:
+              - 'payment/**'
+            order:
+              - 'order/**'
+            tax:
+              - 'tax/**'
+            rating:
+              - 'rating/**'
+            location:
+              - 'location/**'
+            storefront-bff:
+              - 'storefront-bff/**'
+            backoffice-bff:
+              - 'backoffice-bff/**'
+            product:
+              - 'product/**'
+            media:
+              - 'media/**'
+            payment-paypal:
+              - 'payment-paypal/**'
+            webhook:
+              - 'webhook/**'
+            cart:
+              - 'cart/**'
+            recommendation:
+              - 'recommendation/**'
+
+  # 🚀 Call reusable workflows (only when changed)
+
+  search:
+    needs: changes
+    if: needs.changes.outputs.search == 'true'
+    uses: ./.github/workflows/search-ci.yaml
+
+  promotion:
+    needs: changes
+    if: needs.changes.outputs.promotion == 'true'
+    uses: ./.github/workflows/promotion-ci.yaml
+
+  customer:
+    needs: changes
+    if: needs.changes.outputs.customer == 'true'
+    uses: ./.github/workflows/customer-ci.yaml
+
+  inventory:
+    needs: changes
+    if: needs.changes.outputs.inventory == 'true'
+    uses: ./.github/workflows/inventory-ci.yaml
+
+  payment:
+    needs: changes
+    if: needs.changes.outputs.payment == 'true'
+    uses: ./.github/workflows/payment-ci.yaml
+
+  order:
+    needs: changes
+    if: needs.changes.outputs.order == 'true'
+    uses: ./.github/workflows/order-ci.yaml
+
+  tax:
+    needs: changes
+    if: needs.changes.outputs.tax == 'true'
+    uses: ./.github/workflows/tax-ci.yaml
+
+  rating:
+    needs: changes
+    if: needs.changes.outputs.rating == 'true'
+    uses: ./.github/workflows/rating-ci.yaml
+
+  location:
+    needs: changes
+    if: needs.changes.outputs.location == 'true'
+    uses: ./.github/workflows/location-ci.yaml
+
+  storefront-bff:
+    needs: changes
+    if: needs.changes.outputs.storefront_bff == 'true'
+    uses: ./.github/workflows/storefront-bff-ci.yaml
+
+  backoffice-bff:
+    needs: changes
+    if: needs.changes.outputs.backoffice_bff == 'true'
+    uses: ./.github/workflows/backoffice-bff-ci.yaml
+
+  product:
+    needs: changes
+    if: needs.changes.outputs.product == 'true'
+    uses: ./.github/workflows/product-ci.yaml
+
+  media:
+    needs: changes
+    if: needs.changes.outputs.media == 'true'
+    uses: ./.github/workflows/media-ci.yaml
+
+  payment-paypal:
+    needs: changes
+    if: needs.changes.outputs.payment_paypal == 'true'
+    uses: ./.github/workflows/payment-paypal-ci.yaml
+
+  webhook:
+    needs: changes
+    if: needs.changes.outputs.webhook == 'true'
+    uses: ./.github/workflows/webhook-ci.yaml
+
+  cart:
+    needs: changes
+    if: needs.changes.outputs.cart == 'true'
+    uses: ./.github/workflows/cart-ci.yaml
+
+  recommendation:
+    needs: changes
+    if: needs.changes.outputs.recommendation == 'true'
+    uses: ./.github/workflows/recommendation-ci.yaml
+
+  # 🔒 Single required check
+  required-check:
+    needs:
+      - search
+      - promotion
+      - customer
+      - inventory
+      - payment
+      - order
+      - tax
+      - rating
+      - location
+      - storefront-bff
+      - backoffice-bff
+      - product
+      - media
+      - payment-paypal
+      - webhook
+      - cart
+      - recommendation
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Final status
+        run: echo "All required services passed or skipped"
