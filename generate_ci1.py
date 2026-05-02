@@ -4,7 +4,7 @@ import os
 JAVA_SERVICES = [
     "search", "promotion", "customer", "inventory", "payment", "order", 
     "tax", "rating", "location", "storefront-bff", "backoffice-bff"
-    , "product", "media", "payment-paypal", "webhook", "sampledata", "cart", "recommendation"
+    , "product", "media", "payment-paypal", "webhook", "cart", "recommendation"
 ]
 
 TEMPLATE = """name: {service} service ci
@@ -190,6 +190,7 @@ jobs:
 
       - name: Add coverage report to PR
         id: jacoco_report
+        if: github.event.before != '0000000000000000000000000000000000000000'
         uses: madrapps/jacoco-report@v1.6.1
         with:
           # Chỉ định chính xác file đã download về

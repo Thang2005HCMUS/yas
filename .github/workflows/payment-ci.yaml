@@ -170,7 +170,7 @@ jobs:
     needs: Test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code 
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Download Jacoco Report
@@ -181,9 +181,10 @@ jobs:
 
       - name: Add coverage report to PR
         id: jacoco_report
+        if: github.event.before != '0000000000000000000000000000000000000000'
         uses: madrapps/jacoco-report@v1.6.1
         with:
-          # Chỉ định chính xác file đã download ve
+          # Chỉ định chính xác file đã download về
           paths: ${{github.workspace}}/target/jacoco-results/jacoco.xml
           token: ${{secrets.GITHUB_TOKEN}}
           min-coverage-overall: 70

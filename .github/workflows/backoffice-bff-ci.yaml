@@ -17,12 +17,6 @@ on:
       - "pom.xml"
   workflow_dispatch:
 
-permissions:
-  contents: read
-  checks: write
-  pull-requests: write
-  packages: write
-
 jobs:
   Build:
     runs-on: ubuntu-latest
@@ -187,6 +181,7 @@ jobs:
 
       - name: Add coverage report to PR
         id: jacoco_report
+        if: github.event.before != '0000000000000000000000000000000000000000'
         uses: madrapps/jacoco-report@v1.6.1
         with:
           # Chỉ định chính xác file đã download về
