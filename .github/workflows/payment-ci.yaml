@@ -16,6 +16,11 @@ on:
       - ".github/workflows/payment-ci.yaml"
       - "pom.xml"
   workflow_dispatch:
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+  packages: write
 
 jobs:
   Build:
@@ -48,7 +53,7 @@ jobs:
           path: '**/payment-checkstyle-result.xml'
 
       - name: Log in to the Container registry
-        if: ${{ github.ref == 'refs/heads/main' }}
+        # if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -56,7 +61,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker images
-        if: ${{ github.ref == 'refs/heads/main' }}
+        # if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/build-push-action@v6
         with:
           context: ./payment
