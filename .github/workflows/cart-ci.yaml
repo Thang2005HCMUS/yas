@@ -17,6 +17,12 @@ on:
       - "pom.xml"
   workflow_dispatch:
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+  packages: write
+
 jobs:
   Build:
     runs-on: ubuntu-latest
@@ -123,4 +129,4 @@ jobs:
         with:
           context: ./cart
           push: true
-          tags: ghcr.io/nashtech-garage/yas-cart:latest
+          tags: ghcr.io/${{ github.repository_owner }}/yas-cart:latest

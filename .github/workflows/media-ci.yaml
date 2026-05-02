@@ -17,6 +17,12 @@ on:
       - "pom.xml"
   workflow_dispatch:
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+  packages: write
+
 jobs:
   Build:
     runs-on: ubuntu-latest
@@ -69,6 +75,7 @@ jobs:
             media/target/site/jacoco/jacoco.csv
       - name: Analyze with sonar cloud
         if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && github.event_name == 'push' }}
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: >
@@ -88,4 +95,4 @@ jobs:
         with:
           context: ./media
           push: true
-          tags: ghcr.io/nashtech-garage/yas-media:latest
+          tags: ghcr.io/${{ github.repository_owner }}/yas-media:latest
