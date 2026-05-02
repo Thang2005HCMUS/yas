@@ -1,4 +1,4 @@
-name: backoffice service ci
+name: product service ci
 
 on:
   push:
@@ -6,13 +6,13 @@ on:
     paths:
       - "backoffice/**"
       - ".github/workflows/actions/action.yaml"
-      - ".github/workflows/backoffice-ci.yaml"
+      - ".github/workflows/product-ci.yaml"
   pull_request:
     branches: ["main"]
     paths:
       - "backoffice/**"
       - ".github/workflows/actions/action.yaml"
-      - ".github/workflows/backoffice-ci.yaml
+      - ".github/workflows/product-ci.yaml"
   workflow_dispatch:
 
 jobs:
@@ -30,24 +30,24 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        working-directory: backoffice
+        working-directory: product
         run: npm ci
 
       - name: Build project
-        working-directory: backoffice
+        working-directory: product
         run: npm run build
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-assets-backoffice
+          name: build-assets-product
           path: |
-            backoffice/dist/**
-            backoffice/build/**
+            product/dist/**
+            product/build/**
           retention-days: 1
 
       - name: Run Lint
-        working-directory: backoffice
+        working-directory: product
         run: npm run lint || true
 
       - name: Log in to Container registry
@@ -62,9 +62,9 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/build-push-action@v6
         with:
-          context: ./backoffice
+          context: ./product
           push: true
-          tags: ghcr.io/nashtech-garage/yas-backoffice:latest
+          tags: ghcr.io/nashtech-garage/yas-product:latest
 
   Test:
     needs: Build
@@ -81,27 +81,27 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        working-directory: backoffice
+        working-directory: product
         run: npm ci
 
       - name: Run Unit Tests & Coverage
-        working-directory: backoffice
+        working-directory: product
         run: npm run test -- --coverage
 
       - name: Upload Coverage Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-backoffice
-          path: backoffice/coverage
+          name: coverage-product
+          path: product/coverage
           retention-days: 1
 
       - name: Test Summary
         if: always()
         run: |
-          echo "## 🧪 Test Result: backoffice" >> $GITHUB_STEP_SUMMARY
-          if [ -f backoffice/coverage/coverage-summary.json ]; then
-            COVERAGE=$(jq '.total.lines.pct' backoffice/coverage/coverage-summary.json)
+          echo "## 🧪 Test Result: product" >> $GITHUB_STEP_SUMMARY
+          if [ -f product/coverage/coverage-summary.json ]; then
+            COVERAGE=$(jq '.total.lines.pct' product/coverage/coverage-summary.json)
             echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
             echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
             echo "| Line Coverage | $COVERAGE% |" >> $GITHUB_STEP_SUMMARY
@@ -125,20 +125,20 @@ jobs:
       - name: Download Coverage Report
         uses: actions/download-artifact@v4
         with:
-          name: coverage-backoffice
-          path: backoffice/coverage
+          name: coverage-product
+          path: product/coverage
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
         with:
-          projectBaseDir: backoffice
+          projectBaseDir: product
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
       - name: Sonar Summary
         if: always()
         run: |
-          echo "## SonarCloud Report: backoffice" >> $GITHUB_STEP_SUMMARY
+          echo "## SonarCloud Report: product" >> $GITHUB_STEP_SUMMARY
           echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>" >> $GITHUB_STEP_SUMMARY
 
   Check-Coverage:
@@ -150,7 +150,7 @@ jobs:
       - name: Download Coverage
         uses: actions/download-artifact@v4
         with:
-          name: coverage-backoffice
+          name: coverage-product
           path: coverage
 
       - name: Enforce Coverage Threshold
@@ -167,7 +167,7 @@ jobs:
       - name: Coverage Summary
         run: |
           COVERAGE=$(jq '.total.lines.pct' coverage/coverage-summary.json)
-          echo "## 📊 Coverage Summary: backoffice" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Coverage Summary: product" >> $GITHUB_STEP_SUMMARY
           echo "| Metric | Value | Threshold |" >> $GITHUB_STEP_SUMMARY
           echo "|--------|-------|-----------|" >> $GITHUB_STEP_SUMMARY
           echo "| Overall Coverage | $COVERAGE% | 70% |" >> $GITHUB_STEP_SUMMARY
