@@ -1,0 +1,57 @@
+name: CI Dashboard Summary
+
+on:
+  workflow_run:
+    workflows:
+      - search service ci
+      - promotion service ci
+      - customer service ci
+      - inventory service ci
+      - payment service ci
+      - order service ci
+      - tax service ci
+      - rating service ci
+      - location service ci
+      - storefront-bff service ci
+      - backoffice-bff service ci
+      - pricing service ci
+      - product service ci
+      - media service ci
+      - payment-paypal service ci
+      - webhook service ci
+      - sampledata service ci
+      - cart service ci
+      - recommendation service ci
+    types:
+      - completed
+
+jobs:
+  Summary:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Report Status
+        run: |
+          STATUS="${{ github.event.workflow_run.conclusion }}"
+          WORKFLOW_NAME="${{ github.event.workflow_run.name }}"
+          RUN_NUMBER="${{ github.event.workflow_run.run_number }}"
+          RUN_ID="${{ github.event.workflow_run.id }}"
+          REPO_URL="https://github.com/${{ github.repository }}"
+          RUN_URL="$REPO_URL/actions/runs/$RUN_ID"
+
+          if [ "$STATUS" = "success" ]; then
+            ICON="✅ SUCCESS"
+          elif [ "$STATUS" = "failure" ]; then
+            ICON="❌ FAILURE"
+          elif [ "$STATUS" = "cancelled" ]; then
+            ICON="⚪ CANCELLED"
+          else
+            ICON="⚠️ $STATUS"
+          fi
+
+          echo "## 📊 CI Dashboard Update" >> $GITHUB_STEP_SUMMARY
+          echo "> $(TZ=Asia/Ho_Chi_Minh date '+%Y-%m-%d %H:%M:%S') ICT" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Workflow | Status | Run | Link |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| $WORKFLOW_NAME | $ICON | #$RUN_NUMBER | [View Log]($RUN_URL) |" >> $GITHUB_STEP_SUMMARY

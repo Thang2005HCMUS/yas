@@ -2,7 +2,7 @@ name: {{SERVICE_NAME}} service ci
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "**" ]
     paths:
       - "{{SERVICE_NAME}}/**"
       - ".github/workflows/actions/action.yaml"
@@ -27,19 +27,26 @@ jobs:
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
+      - name: Detect Service Name
+        run: |
+          FILE="${GITHUB_WORKFLOW_REF##*/}"
+          FILE="${FILE%@*}"              # sampledata-ci.yaml
+          SERVICE="${FILE%-ci.yaml}"    # sampledata
+
+          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
       - name: Run Maven Build Command
         run: mvn clean install -DskipTests -f {{SERVICE_NAME}}
       - name: Run Maven Test
         run: mvn test -f {{SERVICE_NAME}}
       - name: Unit Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
         with:
           name: Unit-Test-Results
           path: "{{SERVICE_NAME}}/**/surefire-reports/*.xml"
           reporter: java-junit
       - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        id: sonar
+        
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f {{SERVICE_NAME}}

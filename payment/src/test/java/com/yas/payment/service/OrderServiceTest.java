@@ -1,6 +1,6 @@
 package com.yas.payment.service;
 
-import static com.yas.payment.util.SecurityContextUtils.setUpSecurityContext;
+import static com.yas.payment.utils.SecurityContextUtils.setUpSecurityContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;

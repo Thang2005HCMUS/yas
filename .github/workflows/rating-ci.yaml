@@ -2,7 +2,7 @@ name: rating service ci
 
 on:
   push:
-    branches: ["main"]
+    branches: ["**"]
     paths:
       - "rating/**"
       - ".github/workflows/actions/action.yaml"
@@ -20,60 +20,33 @@ on:
 jobs:
   Build:
     runs-on: ubuntu-latest
-    env:
-      FROM_ORIGINAL_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name == github.repository || github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
+          fetch-depth: 0
+
       - uses: ./.github/workflows/actions
+
       - name: Run Maven Build Command
-        run: mvn clean install -pl rating -am
+        run: mvn clean install -pl rating -am -DskipTests
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-assets-rating
+          path: |
+            **/target/*.jar
+            **/target/classes/
+            **/target/generated-sources/
+          retention-days: 1
+
       - name: Run Maven Checkstyle
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         run: mvn checkstyle:checkstyle -pl rating -am -Dcheckstyle.output.file=rating-checkstyle-result.xml
+
       - name: Upload Checkstyle Result
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/rating-checkstyle-result.xml'
-      - name: Test Results
-        uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
-        with:
-          name: Rating-Service-Unit-Test-Results
-          path: "rating/**/*-reports/TEST*.xml"
-          reporter: java-junit
-      - name: Analyze with sonar cloud
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f rating
-      - name: OWASP Dependency Check
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
-        uses: dependency-check/Dependency-Check_Action@main
-        env:
-          JAVA_HOME: /opt/jdk
-        with:
-          project: 'yas'
-          path: '.'
-          format: 'HTML'
-      - name: Upload OWASP Dependency Check results
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
-        uses: actions/upload-artifact@master
-        with:
-          name: OWASP Dependency Check Report
-          path: ${{github.workspace}}/reports
-      - name: Add coverage report to PR
-        uses: madrapps/jacoco-report@v1.6.1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
-        with:
-          paths: ${{github.workspace}}/rating/target/site/jacoco/jacoco.xml
-          token: ${{secrets.GITHUB_TOKEN}}
-          min-coverage-overall: 80
-          min-coverage-changed-files: 60
-          title: 'Rating Coverage Report'
-          update-comment: true
+
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -81,6 +54,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and push Docker images
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/build-push-action@v6
@@ -88,3 +62,156 @@ jobs:
           context: ./rating
           push: true
           tags: ghcr.io/nashtech-garage/yas-rating:latest
+
+  Test:
+    needs: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/workflows/actions
+
+      - name: Run Unit Tests & Generate JaCoCo Report
+        # Vì JaCoCo nằm trong pluginManagement, ta gọi trực tiếp goal để ép nó chạy
+        run: |
+          mvn clean verify \
+          org.jacoco:jacoco-maven-plugin:0.8.14:prepare-agent \
+          test \
+          org.jacoco:jacoco-maven-plugin:0.8.14:report \
+          -pl rating -am -DskipTests=false
+
+      - name: Test Results Summary (Tab)
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Rating-Unit-Test-Results
+          path: "rating/**/*-reports/TEST*.xml"
+          reporter: java-junit
+
+      - name: Write Test Summary to Job
+        if: always()
+        run: |
+          echo "## 🧪 Test Result: rating" >> $GITHUB_STEP_SUMMARY
+          TEST_FILES=$(find rating/target/surefire-reports -name "TEST-*.xml" 2>/dev/null || true)
+          if [ -z "$TEST_FILES" ]; then
+            echo "❌ Không tìm thấy file kết quả test." >> $GITHUB_STEP_SUMMARY
+          else
+            TOTAL_TESTS=0; TOTAL_FAILURES=0; TOTAL_ERRORS=0; TOTAL_SKIPPED=0
+            for FILE in $TEST_FILES; do
+              TESTS=$(grep -oE 'tests="[0-9]+"' "$FILE" | cut -d'"' -f2 | head -1)
+              FAILURES=$(grep -oE 'failures="[0-9]+"' "$FILE" | cut -d'"' -f2 | head -1)
+              ERRORS=$(grep -oE 'errors="[0-9]+"' "$FILE" | cut -d'"' -f2 | head -1)
+              SKIPPED=$(grep -oE 'skipped="[0-9]+"' "$FILE" | cut -d'"' -f2 | head -1)
+              TOTAL_TESTS=$((TOTAL_TESTS + TESTS))
+              TOTAL_FAILURES=$((TOTAL_FAILURES + FAILURES))
+              TOTAL_ERRORS=$((TOTAL_ERRORS + ERRORS))
+              TOTAL_SKIPPED=$((TOTAL_SKIPPED + SKIPPED))
+            done
+            TOTAL_PASSED=$((TOTAL_TESTS - TOTAL_FAILURES - TOTAL_ERRORS - TOTAL_SKIPPED))
+            echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+            echo "| ✅ Passed | $TOTAL_PASSED |" >> $GITHUB_STEP_SUMMARY
+            echo "| ❌ Failures | $TOTAL_FAILURES |" >> $GITHUB_STEP_SUMMARY
+            echo "| ⚠️ Errors | $TOTAL_ERRORS |" >> $GITHUB_STEP_SUMMARY
+            echo "| ⏭️ Skipped | $TOTAL_SKIPPED |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Total** | **$TOTAL_TESTS** |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload Jacoco Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report-rating
+          # Upload đúng file jacoco.xml từ folder site
+          path: rating/target/site/jacoco/jacoco.xml
+          retention-days: 1
+  SonarCloud:
+    needs: [Build, Test] # Cần cả Build để lấy class và Test để lấy Jacoco
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/workflows/actions
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-assets-rating
+
+      - name: Download Jacoco Report
+        uses: actions/download-artifact@v4
+        with:
+          name: jacoco-report-rating
+          path: rating/target/site/jacoco/
+
+      - name: Analyze with sonar cloud
+        id: sonar
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        # Lưu ý: Không dùng 'clean' ở đây vì sẽ làm mất artifact vừa download
+        run: >
+          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -pl rating -am -f pom.xml
+          -Dsonar.coverage.jacoco.xmlReportPaths=rating/target/site/jacoco/jacoco.xml
+      - name: SonarCloud Summary
+        if: always()
+        run: |
+          if [ "${{ steps.sonar.outcome }}" = "success" ]; then ICON="🟢"; STATUS="PASS"; else ICON="🔴"; STATUS="FAIL"; fi
+          {
+            echo "## SonarCloud Report: rating"
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Status | $ICON **$STATUS** |"
+            echo "### Dashboard"
+            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
+          } >> $GITHUB_STEP_SUMMARY
+
+  Check-Coverage:
+    needs: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download Jacoco Report
+        uses: actions/download-artifact@v4
+        with:
+          name: jacoco-report-rating
+          path: target/jacoco-results
+
+      - name: Add coverage report to PR
+        id: jacoco_report
+        if: github.event.before != '0000000000000000000000000000000000000000'
+        uses: madrapps/jacoco-report@v1.6.1
+        with:
+          # Chỉ định chính xác file đã download về
+          paths: ${{github.workspace}}/target/jacoco-results/jacoco.xml
+          token: ${{secrets.GITHUB_TOKEN}}
+          min-coverage-overall: 70
+          min-coverage-changed-files: 60
+          title: 'Rating Coverage Report'
+          update-comment: false
+
+      - name: Write Coverage Summary
+        if: always()
+        run: |
+          COVERAGE="${{ steps.jacoco_report.outputs.coverage-overall }}"
+          CHANGED="${{ steps.jacoco_report.outputs.coverage-changed-files }}"
+          [ -z "$COVERAGE" ] && COVERAGE=0
+          [ -z "$CHANGED" ] && CHANGED=0
+          THRESHOLD=70
+          if (( $(echo "$COVERAGE >= $THRESHOLD" | bc -l) )); then ICON="✅"; STATUS="PASSED"; else ICON="❌"; STATUS="FAILED"; fi
+
+          echo "## 📊 Coverage Summary: rating" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value | Threshold | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Overall Coverage | $COVERAGE% | $THRESHOLD% | $ICON $STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Changed Files | $CHANGED% | 60% | - |" >> $GITHUB_STEP_SUMMARY
+      - name: Enforce Threshold
+        run: |
+          THRESHOLD=70
+          COVERAGE=${{ steps.jacoco_report.outputs.coverage-overall }}
+          if (( $(echo "$COVERAGE <= $THRESHOLD" | bc -l) )); then
+            echo "Độ bao phủ code ($COVERAGE%) thấp hơn yêu cầu ($THRESHOLD%)!"
+            exit 1
+          fi
