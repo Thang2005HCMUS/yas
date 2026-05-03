@@ -17,12 +17,6 @@ on:
       - "pom.xml"
   workflow_dispatch:
 
-permissions:
-  contents: read
-  checks: write
-  pull-requests: write
-  packages: write
-
 jobs:
   Build:
     runs-on: ubuntu-latest
@@ -61,13 +55,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker images
-        if: ${{ github.ref == 'refs/heads/main' }}
-        uses: docker/build-push-action@v6
-        with:
-          context: ./product
-          push: true
-          tags: ghcr.io/nashtech-garage/yas-product:latest
+      # - name: Build and push Docker images
+      #   if: ${{ github.ref == 'refs/heads/main' }}
+      #   uses: docker/build-push-action@v6
+      #   with:
+      #     context: ./product
+      #     push: true
+      #     tags: ghcr.io/nashtech-garage/yas-product:latest
 
   Test:
     needs: Build

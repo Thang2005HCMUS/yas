@@ -64,13 +64,13 @@ jobs:
           username: ${{{{ github.actor }}}}
           password: ${{{{ secrets.GITHUB_TOKEN }}}}
 
-      - name: Build and push Docker images
-        if: ${{{{ github.ref == 'refs/heads/main' }}}}
-        uses: docker/build-push-action@v6
-        with:
-          context: ./{service}
-          push: true
-          tags: ghcr.io/nashtech-garage/yas-{service}:latest
+      # - name: Build and push Docker images
+      #   if: ${{{{ github.ref == 'refs/heads/main' }}}}
+      #   uses: docker/build-push-action@v6
+      #   with:
+      #     context: ./{service}
+      #     push: true
+      #     tags: ghcr.io/nashtech-garage/yas-{service}:latest
 
   Test:
     needs: Build
