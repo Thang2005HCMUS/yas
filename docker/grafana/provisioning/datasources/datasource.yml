@@ -8,16 +8,11 @@ datasources:
       url: http://prometheus:9090
       editable: false
       jsonData:
-        httpMethod: GET
+        httpMethod: POST
+        exemplarTraceIdDestinations:
+          - datasourceUid: tempo
+            name: trace_id
       version: 1
-      # jsonData:
-      #   httpMethod: POST
-      #   exemplarTraceIdDestinations:
-      #     - datasourceUid: webstore-traces
-      #       name: trace_id
-      #     - url: http://localhost:8090/jaeger/ui/trace/$${__value.raw}
-      #       name: trace_id
-      #       urlDisplayLabel: View in Jaeger UI
     - name: Tempo
       type: tempo
       access: proxy
@@ -35,6 +30,8 @@ datasources:
               datasourceUid: 'loki'
           serviceMap:
             datasourceUid: 'prometheus'
+          lokiSearch:
+            datasourceUid: 'loki'
     - name: Loki
       type: loki
       uid: loki
@@ -48,7 +45,7 @@ datasources:
       apiVersion: 1
       jsonData:
         derivedFields:
-        - datasourceUid: tempo
-          matcherRegex: traceid":"([a-f0-9\-]+)
-          name: TraceID
-          url: $${__value.raw}
+          - datasourceUid: tempo
+            matcherRegex: '"trace[_-]?id":"([A-Fa-f0-9]+)"'
+            name: TraceID
+            url: '$${__value.raw}'
