@@ -1,73 +1,77 @@
-# Observability Stack
+# Kubernetes Observability Stack
 
-The local observability stack is defined in `docker-compose.o11y.yml`. It receives telemetry from the YAS services through the OpenTelemetry Java Agent and makes metrics, traces, and logs available in Grafana.
+The YAS Kubernetes observability stack is installed from `k8s/deploy/setup-cluster.sh` into the `observability` namespace. It is based on OpenTelemetry Collector, Prometheus, Grafana, Loki, Tempo, and Promtail.
 
 ## Components
 
-- `collector`: OpenTelemetry Collector. Receives OTLP telemetry from services, batches and transforms it, then exports data to the matching backend.
-- `prometheus`: Metrics storage. Receives application metrics through remote write and scrapes the observability components.
-- `grafana`: Dashboard UI. Provisions Prometheus, Tempo, and Loki datasources automatically.
-- `loki`: Log storage. Stores logs exported by the collector.
-- `tempo`: Distributed trace storage. Stores OTLP traces and supports Grafana trace lookup.
+- `opentelemetry-collector`: Receives OTLP traces from YAS services and Loki-format logs from Promtail. It batches and forwards traces to Tempo and logs to Loki.
+- `prometheus`: Installed by `kube-prometheus-stack`. It stores metrics scraped from YAS service `ServiceMonitor` resources and receives Tempo-generated trace metrics.
+- `grafana`: Installed by `kube-prometheus-stack` and managed through Grafana Operator datasource/dashboard CRs.
+- `loki`: Stores application logs.
+- `tempo`: Stores distributed traces and generates service graph metrics for Prometheus.
+- `promtail`: Collects pod logs and sends them to the OpenTelemetry Collector Loki receiver.
 
 ## Telemetry Flow
 
 ```mermaid
 flowchart LR
-    services["YAS services + OpenTelemetry Java Agent"]
-    collector["collector"]
+    apps["YAS services"]
+    serviceMonitor["ServiceMonitor /actuator/prometheus"]
+    promtail["promtail"]
+    collector["opentelemetry-collector"]
     prometheus["prometheus"]
     loki["loki"]
     tempo["tempo"]
     grafana["grafana"]
 
-    services -->|OTLP gRPC :5555 / HTTP :6666| collector
-    collector -->|metrics remote write| prometheus
-    collector -->|logs push| loki
-    collector -->|traces OTLP gRPC| tempo
+    apps -->|metrics on :8090| serviceMonitor
+    serviceMonitor --> prometheus
+    apps -->|OTLP traces :4318| collector
+    promtail -->|logs :3500| collector
+    collector -->|logs| loki
+    collector -->|traces| tempo
+    tempo -->|service graph metrics| prometheus
     grafana --> prometheus
     grafana --> loki
     grafana --> tempo
 ```
 
-## Run Locally
+## Install
 
-Start only the observability services:
-
-```bash
-docker compose -f docker-compose.o11y.yml up -d
-```
-
-Start the full local stack, using the `COMPOSE_FILE` value from `.env`:
+From `k8s/deploy`:
 
 ```bash
-docker compose up -d
+./setup-cluster.sh
 ```
 
-Useful local endpoints:
+The script installs the observability components in this order:
 
-- Grafana: http://localhost:3000
-- Prometheus: http://localhost:9090
-- Loki: http://localhost:3100
-- Tempo: http://localhost:3200
-- Collector OTLP gRPC: http://localhost:5555
-- Collector OTLP HTTP: http://localhost:6666
+- `loki` from `grafana/loki`
+- `tempo` from `grafana/tempo`
+- `opentelemetry-operator`
+- `opentelemetry-collector` from `observability/opentelemetry`
+- `promtail` from `grafana/promtail`
+- `prometheus` and built-in Grafana from `kube-prometheus-stack`
+- Grafana Operator resources from `observability/grafana`
 
-The Java services already read these variables from `.env`:
+## Important Configuration
 
-```env
-OTEL_EXPORTER_OTLP_ENDPOINT=http://collector:5555
-OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-OTEL_LOGS_EXPORTER=otlp
-OTEL_TRACES_EXPORTER=otlp
-OTEL_METRICS_EXPORTER=otlp
-```
+- YAS services expose metrics on the `metric` service port and are discovered by `k8s/charts/backend/templates/servicemonitoring.yaml`.
+- YAS traces are sent to `http://opentelemetry-collector.observability:4318/v1/traces` from `k8s/charts/yas-configuration/values.yaml`.
+- Promtail sends logs to `http://opentelemetry-collector:3500/loki/api/v1/push`.
+- Grafana is exposed at `grafana.<domain>`, where `<domain>` comes from `k8s/deploy/cluster-config.yaml`.
 
 ## Quick Checks
 
 ```bash
-docker compose -f docker-compose.o11y.yml ps
-docker compose -f docker-compose.o11y.yml logs collector
+kubectl get pods -n observability
+kubectl get servicemonitor -n yas
+kubectl get grafanadatasource -n observability
+kubectl logs -n observability deploy/opentelemetry-collector
 ```
 
-In Grafana, open the provisioned datasources and dashboards. Metrics should appear in Prometheus, traces in Tempo, and logs in Loki after at least one YAS service sends telemetry.
+In Grafana:
+
+- Use Prometheus for metrics.
+- Use Loki for logs, filtered by namespace, pod, container, or trace ID.
+- Use Tempo for traces and node graph/service graph views.

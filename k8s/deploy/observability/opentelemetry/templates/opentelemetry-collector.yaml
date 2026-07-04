@@ -5,9 +5,21 @@ metadata:
 spec:
   mode: deployment
   ports:
+    - name: otlp-grpc
+      port: 4317
+      protocol: TCP
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      protocol: TCP
+      targetPort: 4318
     - name: loki
       port: 3500
       protocol: TCP
       targetPort: 3500
+    - name: health-check
+      port: 13133
+      protocol: TCP
+      targetPort: 13133
   config: |
     {{ toYaml .Values.opentelemetryCollectorConfig | nindent 4 }}

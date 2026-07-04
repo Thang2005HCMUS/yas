@@ -70,7 +70,7 @@ YAS is a pet project aim to practice building a typical microservice application
 1. `http://pgadmin.yas.local/`. Account login: `admin@yas.com` / admin. Register a server: postgres, port 5432, username admin, password admin. The Postgresql server is also exposed to the host machine: servername: localhost, port: 5432, username: admin, password: admin
 2. `http://api.yas.local/swagger-ui/` for all the REST API document of all the services
 3. `http://identity/` for Keycloak console, account admin/admin
-4. `http://grafana/` for observability: logs, traces, metrics
+4. `http://grafana/` for observability: log, trace, matrix
 5. `http://elasticsearch/` for calling Elasticsearch APIs
 
 #### About docker-compose files
@@ -84,7 +84,6 @@ https://github.com/nashtech-garage/yas/tree/main/k8s/deploy
 ## Documentation
 - [Architecture and components](https://github.com/nashtech-garage/yas/tree/main/docs)
 - [Developer guidelines](https://github.com/nashtech-garage/yas/tree/main/docs/developer-guidelines.md)
-- [Observability stack](https://github.com/nashtech-garage/yas/blob/main/docs/observability.md)
 
 ## Contributing
 - Give us a star

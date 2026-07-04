@@ -10,16 +10,12 @@ receivers:
             - "http://*"
             - "https://*"
 
-extensions:
-  health_check:
-    endpoint: 0.0.0.0:13133
-
 connectors:
   servicegraph:
     latency_histogram_buckets: [100ms, 250ms, 1s, 5s, 10s]
     dimensions:
-      - service.namespace
-      - service.name
+      - dimension-1
+      - dimension-2
     store:
       ttl: 2s
       max_items: 20
@@ -41,10 +37,6 @@ exporters:
       exporter: true
       job: true
 processors:
-  memory_limiter:
-    check_interval: 1s
-    limit_mib: 96
-    spike_limit_mib: 24
   batch:
     # timeout: 1s
     # send_batch_size: 1024
@@ -78,23 +70,22 @@ processors:
 #   spanmetrics:
 
 service:
-  extensions: [health_check]
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter, batch]
+      processors: [batch]
       exporters: [otlp, servicegraph]
     metrics:
       receivers: [otlp, servicegraph]
-      processors: [memory_limiter, transform, batch]
+      processors: [transform, batch]
       exporters: [prometheusremotewrite]
     logs:
       receivers: [otlp]
-      processors: [memory_limiter, resource/loki, batch]
+      processors: [resource/loki, batch]
       exporters: [loki]
   telemetry:
     metrics:
-      address: 0.0.0.0:8888
+      address: collector:8888
       level: detailed
     logs:
       level: INFO
