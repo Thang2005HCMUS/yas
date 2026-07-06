@@ -1,244 +1,371 @@
-import os
+"""Generate the GitHub Actions CI/GitOps workflows used by the YAS demo.
 
-# Danh sách các service Java cần tạo CI
-JAVA_SERVICES = [
-    "search", "promotion", "customer", "inventory", "payment", "order", 
-    "tax", "rating", "location", "storefront-bff", "backoffice-bff"
-    , "product", "media", "payment-paypal", "webhook", "cart", "recommendation"
+Do not edit the generated ``*-ci.yaml`` files by hand.  Change this file and run:
+
+    python generate_ci1.py
+"""
+
+from dataclasses import dataclass
+from pathlib import Path
+from textwrap import dedent
+
+
+ROOT = Path(__file__).resolve().parent
+WORKFLOW_DIR = ROOT / ".github" / "workflows"
+
+
+@dataclass(frozen=True)
+class Service:
+    """A deployable service and the repository paths used to build/deploy it."""
+
+    name: str
+    kind: str
+    source_dir: str | None = None
+    image_name: str | None = None
+
+    @property
+    def source(self) -> str:
+        return self.source_dir or self.name
+
+    @property
+    def image(self) -> str:
+        return self.image_name or f"yas-{self.name}"
+
+    @property
+    def values_file(self) -> str:
+        return f"k8s/charts/{self.name}/values.yaml"
+
+
+# These are the services retained for the DevOps/CD assignment.  The UI source
+# directory and its Helm release have different names in the upstream project.
+SERVICES = [
+    Service("product", "java"),
+    Service("cart", "java"),
+    Service("order", "java"),
+    Service("customer", "java"),
+    Service("inventory", "java"),
+    Service("tax", "java"),
+    Service("media", "java"),
+    Service("search", "java"),
+    Service("storefront-bff", "java"),
+    Service("backoffice-bff", "java"),
+    Service("storefront-ui", "node", source_dir="storefront", image_name="yas-storefront"),
+    Service("backoffice-ui", "node", source_dir="backoffice", image_name="yas-backoffice"),
+    Service("swagger-ui", "container"),
+    Service("sampledata", "java"),
 ]
 
-TEMPLATE = """name: {service} service ci
+
+JAVA_TEMPLATE = r"""
+name: __SERVICE__ CI GitOps
 
 on:
   push:
     branches: ["**"]
     paths:
-      - "{service}/**"
-      - ".github/workflows/actions/action.yaml"
-      - ".github/workflows/{service}-ci.yaml"
+      - "__SOURCE__/**"
+      - "common-library/**"
       - "pom.xml"
+      - "generate_ci1.py"
+      - ".github/workflows/__SERVICE__-ci.yaml"
   pull_request:
     branches: ["main"]
     paths:
-      - "{service}/**"
-      - ".github/workflows/actions/action.yaml"
-      - ".github/workflows/{service}-ci.yaml"
+      - "__SOURCE__/**"
+      - "common-library/**"
       - "pom.xml"
+      - "generate_ci1.py"
+      - ".github/workflows/__SERVICE__-ci.yaml"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
+concurrency:
+  group: __SERVICE__-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  Build:
+  build-test-publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: ./.github/workflows/actions
-
-      - name: Run Maven Build Command
-        run: mvn clean install -pl {service} -am -DskipTests
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-assets-{service}
-          path: |
-            **/target/*.jar
-            **/target/classes/
-            **/target/generated-sources/
-          retention-days: 1
-
-      - name: Run Maven Checkstyle
-        run: mvn checkstyle:checkstyle -pl {service} -am -Dcheckstyle.output.file={service}-checkstyle-result.xml
-
-      - name: Upload Checkstyle Result
-        uses: jwgmeligmeyling/checkstyle-github-action@master
-        with:
-          path: '**/{service}-checkstyle-result.xml'
-
-      - name: Log in to the Container registry
-        if: ${{{{ github.ref == 'refs/heads/main' }}}}
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{{{ github.actor }}}}
-          password: ${{{{ secrets.GITHUB_TOKEN }}}}
-
-      - name: Build and push Docker images
-        if: ${{{{ github.ref == 'refs/heads/main' }}}}
-        uses: docker/build-push-action@v6
-        with:
-          context: ./{service}
-          push: true
-          tags: ghcr.io/nashtech-garage/yas-{service}:latest
-
-  Test:
-    needs: Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/workflows/actions
-
-      - name: Run Unit Tests & Generate JaCoCo Report
-        # Vì JaCoCo nằm trong pluginManagement, ta gọi trực tiếp goal để ép nó chạy
-        run: |
-          mvn clean verify \\
-          org.jacoco:jacoco-maven-plugin:0.8.14:prepare-agent \\
-          test \\
-          org.jacoco:jacoco-maven-plugin:0.8.14:report \\
-          -pl {service} -am -DskipTests=false
-
-      - name: Test Results Summary (Tab)
-        uses: dorny/test-reporter@v1
-        if: always()
-        with:
-          name: {service_cap}-Unit-Test-Results
-          path: "{service}/**/*-reports/TEST*.xml"
-          reporter: java-junit
-
-      - name: Write Test Summary to Job
-        if: always()
-        run: |
-          echo "## 🧪 Test Result: {service}" >> $GITHUB_STEP_SUMMARY
-          TEST_FILES=$(find {service}/target/surefire-reports -name "TEST-*.xml" 2>/dev/null || true)
-          if [ -z "$TEST_FILES" ]; then
-            echo "❌ Không tìm thấy file kết quả test." >> $GITHUB_STEP_SUMMARY
-          else
-            TOTAL_TESTS=0; TOTAL_FAILURES=0; TOTAL_ERRORS=0; TOTAL_SKIPPED=0
-            for FILE in $TEST_FILES; do
-              TESTS=$(grep -oE 'tests="[0-9]+"' "$FILE" | cut -d'"' -f2 | head -1)
-              FAILURES=$(grep -oE 'failures="[0-9]+"' "$FILE" | cut -d'"' -f2 | head -1)
-              ERRORS=$(grep -oE 'errors="[0-9]+"' "$FILE" | cut -d'"' -f2 | head -1)
-              SKIPPED=$(grep -oE 'skipped="[0-9]+"' "$FILE" | cut -d'"' -f2 | head -1)
-              TOTAL_TESTS=$((TOTAL_TESTS + TESTS))
-              TOTAL_FAILURES=$((TOTAL_FAILURES + FAILURES))
-              TOTAL_ERRORS=$((TOTAL_ERRORS + ERRORS))
-              TOTAL_SKIPPED=$((TOTAL_SKIPPED + SKIPPED))
-            done
-            TOTAL_PASSED=$((TOTAL_TESTS - TOTAL_FAILURES - TOTAL_ERRORS - TOTAL_SKIPPED))
-            echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
-            echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
-            echo "| ✅ Passed | $TOTAL_PASSED |" >> $GITHUB_STEP_SUMMARY
-            echo "| ❌ Failures | $TOTAL_FAILURES |" >> $GITHUB_STEP_SUMMARY
-            echo "| ⚠️ Errors | $TOTAL_ERRORS |" >> $GITHUB_STEP_SUMMARY
-            echo "| ⏭️ Skipped | $TOTAL_SKIPPED |" >> $GITHUB_STEP_SUMMARY
-            echo "| **Total** | **$TOTAL_TESTS** |" >> $GITHUB_STEP_SUMMARY
-          fi
-
-      - name: Upload Jacoco Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: jacoco-report-{service}
-          # Upload đúng file jacoco.xml từ folder site
-          path: {service}/target/site/jacoco/jacoco.xml
-          retention-days: 1
-  SonarCloud:
-    needs: [Build, Test] # Cần cả Build để lấy class và Test để lấy Jacoco
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: ./.github/workflows/actions
-
-      - name: Download Build Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-assets-{service}
-
-      - name: Download Jacoco Report
-        uses: actions/download-artifact@v4
-        with:
-          name: jacoco-report-{service}
-          path: {service}/target/site/jacoco/
-
-      - name: Analyze with sonar cloud
-        id: sonar
-        env:
-          SONAR_TOKEN: ${{{{ secrets.SONAR_TOKEN }}}}
-        # Lưu ý: Không dùng 'clean' ở đây vì sẽ làm mất artifact vừa download
-        run: >
-          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
-          -pl {service} -am -f pom.xml
-          -Dsonar.coverage.jacoco.xmlReportPaths={service}/target/site/jacoco/jacoco.xml
-      - name: SonarCloud Summary
-        if: always()
-        run: |
-          if [ "${{{{ steps.sonar.outcome }}}}" = "success" ]; then ICON="🟢"; STATUS="PASS"; else ICON="🔴"; STATUS="FAIL"; fi
-          {{
-            echo "## SonarCloud Report: {service}"
-            echo "| Item | Value |"
-            echo "|------|-------|"
-            echo "| Status | $ICON **$STATUS** |"
-            echo "### Dashboard"
-            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
-          }} >> $GITHUB_STEP_SUMMARY
-
-  Check-Coverage:
-    needs: Test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
+      - name: Checkout source
         uses: actions/checkout@v4
-
-      - name: Download Jacoco Report
-        uses: actions/download-artifact@v4
         with:
-          name: jacoco-report-{service}
-          path: target/jacoco-results
+          fetch-depth: 0
 
-      - name: Add coverage report to PR
-        id: jacoco_report
-        if: github.event.before != '0000000000000000000000000000000000000000'
-        uses: madrapps/jacoco-report@v1.6.1
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
         with:
-          # Chỉ định chính xác file đã download về
-          paths: ${{{{github.workspace}}}}/target/jacoco-results/jacoco.xml
-          token: ${{{{secrets.GITHUB_TOKEN}}}}
-          min-coverage-overall: 70
-          min-coverage-changed-files: 60
-          title: '{service_cap} Coverage Report'
-          update-comment: false
+          distribution: temurin
+          java-version: "25"
+          cache: maven
 
-      - name: Write Coverage Summary
-        if: always()
-        run: |
-          COVERAGE="${{{{ steps.jacoco_report.outputs.coverage-overall }}}}"
-          CHANGED="${{{{ steps.jacoco_report.outputs.coverage-changed-files }}}}"
-          [ -z "$COVERAGE" ] && COVERAGE=0
-          [ -z "$CHANGED" ] && CHANGED=0
-          THRESHOLD=70
-          if (( $(echo "$COVERAGE >= $THRESHOLD" | bc -l) )); then ICON="✅"; STATUS="PASSED"; else ICON="❌"; STATUS="FAILED"; fi
+      - name: Build __SERVICE__
+        run: mvn clean package -pl __SOURCE__ -am
 
-          echo "## 📊 Coverage Summary: {service}" >> $GITHUB_STEP_SUMMARY
-          echo "| Metric | Value | Threshold | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|-------|-----------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Overall Coverage | $COVERAGE% | $THRESHOLD% | $ICON $STATUS |" >> $GITHUB_STEP_SUMMARY
-          echo "| Changed Files | $CHANGED% | 60% | - |" >> $GITHUB_STEP_SUMMARY
-      - name: Enforce Threshold
-        run: |
-          THRESHOLD=70
-          COVERAGE=${{{{ steps.jacoco_report.outputs.coverage-overall }}}}
-          if (( $(echo "$COVERAGE <= $THRESHOLD" | bc -l) )); then
-            echo "Độ bao phủ code ($COVERAGE%) thấp hơn yêu cầu ($THRESHOLD%)!"
-            exit 1
-          fi
+      - name: Test __SERVICE__
+        run: mvn test -pl __SOURCE__ -am
+__DOCKER_STEPS__
 """
 
-def main():
-    output_dir = ".github/workflows"
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
 
-    for service in JAVA_SERVICES:
-        service_cap = service.replace("-", " ").title().replace(" ", "")
-        content = TEMPLATE.format(service=service, service_cap=service_cap)
-        
-        file_path = os.path.join(output_dir, f"{service}-ci.yaml")
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(content)
-        print(f"Generated: {file_path}")
+NODE_TEMPLATE = r"""
+name: __SERVICE__ CI GitOps
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "__SOURCE__/**"
+      - "generate_ci1.py"
+      - ".github/workflows/__SERVICE__-ci.yaml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "__SOURCE__/**"
+      - "generate_ci1.py"
+      - ".github/workflows/__SERVICE__-ci.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: __SERVICE__-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-test-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: __SOURCE__/package-lock.json
+
+      - name: Install dependencies
+        working-directory: __SOURCE__
+        run: npm ci
+
+      # The YAS UI packages do not currently define an npm test script. Lint is
+      # the available automated code check, so it is the test gate for the UI.
+      - name: Test __SERVICE__ (lint)
+        working-directory: __SOURCE__
+        run: npm run lint
+
+      - name: Build __SERVICE__
+        working-directory: __SOURCE__
+        run: npm run build
+__DOCKER_STEPS__
+"""
+
+
+CONTAINER_TEMPLATE = r"""
+name: __SERVICE__ CI GitOps
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "__SOURCE__/**"
+      - "generate_ci1.py"
+      - ".github/workflows/__SERVICE__-ci.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: __SERVICE__-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+__DOCKER_STEPS__
+"""
+
+
+DOCKER_STEPS = r"""
+
+      - name: Set up Docker Buildx
+        if: github.event_name == 'push'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./__SOURCE__
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/__IMAGE__:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+"""
+
+
+GITOPS_STEPS = r"""
+
+      - name: Update Helm image for ArgoCD
+        if: github.event_name == 'push'
+        env:
+          IMAGE_REPOSITORY: ${{ secrets.DOCKERHUB_USERNAME }}/__IMAGE__
+          IMAGE_TAG: ${{ github.sha }}
+          VALUES_FILE: __VALUES_FILE__
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          values_file = Path(os.environ["VALUES_FILE"])
+          repository = os.environ["IMAGE_REPOSITORY"]
+          tag = os.environ["IMAGE_TAG"]
+          lines = values_file.read_text(encoding="utf-8").splitlines(keepends=True)
+
+          image_indent = None
+          repository_updated = False
+          tag_updated = False
+          for index, line in enumerate(lines):
+              stripped = line.strip()
+              indent = len(line) - len(line.lstrip())
+              if image_indent is None:
+                  if stripped == "image:":
+                      image_indent = indent
+                  continue
+              if stripped and indent <= image_indent:
+                  break
+              if stripped.startswith("repository:"):
+                  lines[index] = f"{' ' * indent}repository: {repository}\n"
+                  repository_updated = True
+              elif stripped.startswith("tag:"):
+                  lines[index] = f"{' ' * indent}tag: \"{tag}\"\n"
+                  tag_updated = True
+
+          if not (repository_updated and tag_updated):
+              raise SystemExit(f"Could not update image.repository and image.tag in {values_file}")
+          values_file.write_text("".join(lines), encoding="utf-8")
+          PY
+
+      - name: Commit Helm manifest change
+        if: github.event_name == 'push'
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          VALUES_FILE: __VALUES_FILE__
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$VALUES_FILE"
+          if git diff --cached --quiet; then
+            echo "Helm values already use image tag $IMAGE_TAG"
+            exit 0
+          fi
+          git commit -m "chore(gitops): deploy __SERVICE__ $IMAGE_TAG [skip ci]"
+
+          for attempt in 1 2 3; do
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              exit 0
+            fi
+            echo "Push attempt $attempt failed; rebasing onto origin/${GITHUB_REF_NAME}"
+            git fetch origin "$GITHUB_REF_NAME"
+            git rebase "origin/${GITHUB_REF_NAME}"
+          done
+          echo "Unable to push the Helm manifest update after 3 attempts"
+          exit 1
+"""
+
+
+def docker_steps(service: Service, has_values_file: bool) -> str:
+    """Return publish steps, plus GitOps steps when a Helm values file exists."""
+
+    steps = DOCKER_STEPS
+    if has_values_file:
+        steps += GITOPS_STEPS
+    return steps
+
+
+def render(service: Service, has_dockerfile: bool, has_values_file: bool) -> str:
+    """Render one service workflow."""
+
+    templates = {
+        "java": JAVA_TEMPLATE,
+        "node": NODE_TEMPLATE,
+        "container": CONTAINER_TEMPLATE,
+    }
+    template = templates[service.kind]
+    publish_steps = docker_steps(service, has_values_file) if has_dockerfile else ""
+    # Insert the optional block first because it contains the other placeholders.
+    content = dedent(template).lstrip().replace(
+        "__DOCKER_STEPS__", publish_steps.rstrip()
+    )
+    replacements = {
+        "__SERVICE__": service.name,
+        "__SOURCE__": service.source,
+        "__IMAGE__": service.image,
+        "__VALUES_FILE__": service.values_file,
+    }
+    for placeholder, value in replacements.items():
+        content = content.replace(placeholder, value)
+    return content.rstrip() + "\n"
+
+
+def main() -> None:
+    WORKFLOW_DIR.mkdir(parents=True, exist_ok=True)
+
+    generated = 0
+    skipped = 0
+    for service in SERVICES:
+        source_path = ROOT / service.source
+        if not source_path.is_dir():
+            print(f"WARNING: skipping {service.name}: source folder '{service.source}' does not exist")
+            skipped += 1
+            continue
+
+        dockerfile = source_path / "Dockerfile"
+        values_file = ROOT / service.values_file
+        has_dockerfile = dockerfile.is_file()
+        has_values_file = values_file.is_file()
+        if not has_dockerfile:
+            print(f"WARNING: {service.name}: no Dockerfile; generating build/test only")
+        if has_dockerfile and not has_values_file:
+            print(f"WARNING: {service.name}: no Helm values file; skipping GitOps update")
+
+        workflow_file = WORKFLOW_DIR / f"{service.name}-ci.yaml"
+        workflow_file.write_text(
+            render(service, has_dockerfile, has_values_file), encoding="utf-8"
+        )
+        print(f"Generated: {workflow_file.relative_to(ROOT)}")
+        generated += 1
+
+    # The upstream UI workflows use source-folder names.  Their replacements
+    # above use deployment names, so remove these two aliases to avoid duplicate CI.
+    for legacy_name in ("storefront-ci.yaml", "backoffice-ci.yaml"):
+        legacy_file = WORKFLOW_DIR / legacy_name
+        if legacy_file.exists():
+            legacy_file.unlink()
+            print(f"Removed legacy duplicate: {legacy_file.relative_to(ROOT)}")
+
+    print(f"Done: generated {generated} workflow(s), skipped {skipped} service(s)")
+
 
 if __name__ == "__main__":
     main()

@@ -1,29 +1,25 @@
-name: inventory CI GitOps
+name: storefront-ui CI GitOps
 
 on:
   push:
     branches: ["**"]
     paths:
-      - "inventory/**"
-      - "common-library/**"
-      - "pom.xml"
+      - "storefront/**"
       - "generate_ci1.py"
-      - ".github/workflows/inventory-ci.yaml"
+      - ".github/workflows/storefront-ui-ci.yaml"
   pull_request:
     branches: ["main"]
     paths:
-      - "inventory/**"
-      - "common-library/**"
-      - "pom.xml"
+      - "storefront/**"
       - "generate_ci1.py"
-      - ".github/workflows/inventory-ci.yaml"
+      - ".github/workflows/storefront-ui-ci.yaml"
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: inventory-${{ github.ref }}
+  group: storefront-ui-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -35,18 +31,26 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up JDK 25
-        uses: actions/setup-java@v4
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
         with:
-          distribution: temurin
-          java-version: "25"
-          cache: maven
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: storefront/package-lock.json
 
-      - name: Build inventory
-        run: mvn clean package -pl inventory -am
+      - name: Install dependencies
+        working-directory: storefront
+        run: npm ci
 
-      - name: Test inventory
-        run: mvn test -pl inventory -am
+      # The YAS UI packages do not currently define an npm test script. Lint is
+      # the available automated code check, so it is the test gate for the UI.
+      - name: Test storefront-ui (lint)
+        working-directory: storefront
+        run: npm run lint
+
+      - name: Build storefront-ui
+        working-directory: storefront
+        run: npm run build
 
 
       - name: Set up Docker Buildx
@@ -64,9 +68,9 @@ jobs:
         if: github.event_name == 'push'
         uses: docker/build-push-action@v6
         with:
-          context: ./inventory
+          context: ./storefront
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/yas-inventory:${{ github.sha }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/yas-storefront:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -74,9 +78,9 @@ jobs:
       - name: Update Helm image for ArgoCD
         if: github.event_name == 'push'
         env:
-          IMAGE_REPOSITORY: ${{ secrets.DOCKERHUB_USERNAME }}/yas-inventory
+          IMAGE_REPOSITORY: ${{ secrets.DOCKERHUB_USERNAME }}/yas-storefront
           IMAGE_TAG: ${{ github.sha }}
-          VALUES_FILE: k8s/charts/inventory/values.yaml
+          VALUES_FILE: k8s/charts/storefront-ui/values.yaml
         run: |
           python - <<'PY'
           import os
@@ -115,7 +119,7 @@ jobs:
         if: github.event_name == 'push'
         env:
           IMAGE_TAG: ${{ github.sha }}
-          VALUES_FILE: k8s/charts/inventory/values.yaml
+          VALUES_FILE: k8s/charts/storefront-ui/values.yaml
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -124,7 +128,7 @@ jobs:
             echo "Helm values already use image tag $IMAGE_TAG"
             exit 0
           fi
-          git commit -m "chore(gitops): deploy inventory $IMAGE_TAG [skip ci]"
+          git commit -m "chore(gitops): deploy storefront-ui $IMAGE_TAG [skip ci]"
 
           for attempt in 1 2 3; do
             if git push origin "HEAD:${GITHUB_REF_NAME}"; then

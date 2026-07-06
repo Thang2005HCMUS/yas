@@ -1,123 +1,138 @@
-name: sampledata service ci
+name: sampledata CI GitOps
 
 on:
   push:
     branches: ["**"]
     paths:
       - "sampledata/**"
-      - ".github/workflows/actions/action.yaml"
-      - ".github/workflows/sampledata-ci.yaml"
+      - "common-library/**"
       - "pom.xml"
+      - "generate_ci1.py"
+      - ".github/workflows/sampledata-ci.yaml"
   pull_request:
     branches: ["main"]
     paths:
       - "sampledata/**"
-      - ".github/workflows/actions/action.yaml"
-      - ".github/workflows/sampledata-ci.yaml"
+      - "common-library/**"
       - "pom.xml"
+      - "generate_ci1.py"
+      - ".github/workflows/sampledata-ci.yaml"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
+concurrency:
+  group: sampledata-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  Build:
+  build-test-publish:
     runs-on: ubuntu-latest
-    env:
-      FROM_ORIGINAL_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name == github.repository || github.ref == 'refs/heads/main' }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout source
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
-      - uses: ./.github/workflows/actions
-      - name: Detect Service Name
-        run: |
-          FILE="${GITHUB_WORKFLOW_REF##*/}"
-          FILE="${FILE%@*}"              # sampledata-ci.yaml
-          SERVICE="${FILE%-ci.yaml}"    # sampledata
+          fetch-depth: 0
 
-          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
-      - name: Detect Service Name
-        run: |
-          FILE="${GITHUB_WORKFLOW_REF##*/}"
-          FILE="${FILE%@*}"              # sampledata-ci.yaml
-          SERVICE="${FILE%-ci.yaml}"    # sampledata
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
 
-          echo "SERVICE_NAME=$SERVICE" >> $GITHUB_ENV
-      - name: Run Maven Build Command
-        run: mvn clean install -pl sampledata -am
-      - name: Run Maven Checkstyle
-        
-        run: mvn checkstyle:checkstyle -pl sampledata -am -Dcheckstyle.output.file=sampledata-checkstyle-result.xml
-      - name: Upload Checkstyle Result
-        
-        uses: jwgmeligmeyling/checkstyle-github-action@master
-        with:
-          path: '**/sampledata-checkstyle-result.xml'
-      - name: Analyze with sonar cloud
-        id: sonar
-        continue-on-error: true
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: >
-          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
-          -pl sampledata -am -f pom.xml
-          -Dsonar.coverage.jacoco.xmlReportPaths=sampledata/target/site/jacoco/jacoco.xml
-      - name: SonarCloud Summary
-        if: always()
-        run: |
-          if [ "${{ steps.sonar.outcome }}" = "success" ]; then
-            ICON="🟢"
-            STATUS="PASS"
-          else
-            ICON="🔴"
-            STATUS="FAIL"
-          fi
+      - name: Build sampledata
+        run: mvn clean package -pl sampledata -am
 
-          {
-            echo "## SonarCloud Report"
-            echo ""
-            echo "| Item | Value |"
-            echo "|------|-------|"
-            echo "| Status | $ICON **$STATUS** |"
-            echo "| Raw Outcome | \`${{ steps.sonar.outcome }}\` |"
-            echo "| Final Conclusion | \`${{ steps.sonar.conclusion }}\` |"
-            echo "| Service | SampleData |"
-            echo "| Branch | \`${{ github.ref_name }}\` |"
-            echo "| Commit | \`${{ github.sha }}\` |"
-            echo "| Actor | \`${{ github.actor }}\` |"
-            echo ""
-            echo "### Dashboard"
-            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
-            echo ""
-            echo "### Notes"
-            echo "- If status = FAIL, open Sonar step logs."
-            echo "- Check Quality Gate, coverage, bugs, vulnerabilities."
-            echo "- If using continue-on-error, workflow still continues."
-          } >> $GITHUB_STEP_SUMMARY
-      - name: OWASP Dependency Check
-        
-        uses: dependency-check/Dependency-Check_Action@main
-        env:
-          JAVA_HOME: /opt/jdk
-        with:
-          project: 'yas'
-          path: '.'
-          format: 'HTML'
-      - name: Upload OWASP Dependency Check results
-        
-        uses: actions/upload-artifact@master
-        with:
-          name: OWASP Dependency Check Report
-          path: ${{github.workspace}}/reports
-      - name: Log in to the Container registry
-        if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Test sampledata
+        run: mvn test -pl sampledata -am
+
+
+      - name: Set up Docker Buildx
+        if: github.event_name == 'push'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: github.event_name == 'push'
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push Docker images
-        if: ${{ github.ref == 'refs/heads/main' }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        if: github.event_name == 'push'
         uses: docker/build-push-action@v6
         with:
           context: ./sampledata
           push: true
-          tags: ghcr.io/nashtech-garage/yas-sampledata:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/yas-sampledata:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+
+      - name: Update Helm image for ArgoCD
+        if: github.event_name == 'push'
+        env:
+          IMAGE_REPOSITORY: ${{ secrets.DOCKERHUB_USERNAME }}/yas-sampledata
+          IMAGE_TAG: ${{ github.sha }}
+          VALUES_FILE: k8s/charts/sampledata/values.yaml
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          values_file = Path(os.environ["VALUES_FILE"])
+          repository = os.environ["IMAGE_REPOSITORY"]
+          tag = os.environ["IMAGE_TAG"]
+          lines = values_file.read_text(encoding="utf-8").splitlines(keepends=True)
+
+          image_indent = None
+          repository_updated = False
+          tag_updated = False
+          for index, line in enumerate(lines):
+              stripped = line.strip()
+              indent = len(line) - len(line.lstrip())
+              if image_indent is None:
+                  if stripped == "image:":
+                      image_indent = indent
+                  continue
+              if stripped and indent <= image_indent:
+                  break
+              if stripped.startswith("repository:"):
+                  lines[index] = f"{' ' * indent}repository: {repository}\n"
+                  repository_updated = True
+              elif stripped.startswith("tag:"):
+                  lines[index] = f"{' ' * indent}tag: \"{tag}\"\n"
+                  tag_updated = True
+
+          if not (repository_updated and tag_updated):
+              raise SystemExit(f"Could not update image.repository and image.tag in {values_file}")
+          values_file.write_text("".join(lines), encoding="utf-8")
+          PY
+
+      - name: Commit Helm manifest change
+        if: github.event_name == 'push'
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          VALUES_FILE: k8s/charts/sampledata/values.yaml
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$VALUES_FILE"
+          if git diff --cached --quiet; then
+            echo "Helm values already use image tag $IMAGE_TAG"
+            exit 0
+          fi
+          git commit -m "chore(gitops): deploy sampledata $IMAGE_TAG [skip ci]"
+
+          for attempt in 1 2 3; do
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              exit 0
+            fi
+            echo "Push attempt $attempt failed; rebasing onto origin/${GITHUB_REF_NAME}"
+            git fetch origin "$GITHUB_REF_NAME"
+            git rebase "origin/${GITHUB_REF_NAME}"
+          done
+          echo "Unable to push the Helm manifest update after 3 attempts"
+          exit 1
