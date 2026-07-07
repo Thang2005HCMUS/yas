@@ -1,7 +1,7 @@
 backend:
   image:
     repository: ghcr.io/thang2005hcmus/yas-media
-    tag: latest
+    tag: sha-d48fc80f3319c2159c215370fe5d6b8521687fc6
 
   nameOverride: media
   fullnameOverride: media
