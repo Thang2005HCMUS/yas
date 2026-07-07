@@ -1,7 +1,7 @@
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-webhook
-    tag: latest
+    repository: ghcr.io/thang2005hcmus/yas-webhook
+    tag: sha-d48fc80f3319c2159c215370fe5d6b8521687fc6
 
   nameOverride: webhook
   fullnameOverride: webhook
