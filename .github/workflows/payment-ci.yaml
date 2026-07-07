@@ -119,7 +119,7 @@ jobs:
     if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     env:
-      IMAGE_REPOSITORY: ghcr.io/nashtech-garage/yas-payment
+      IMAGE_NAME: yas-payment
       IMAGE_TAG: sha-${{ github.sha }}
       VALUES_FILE: k8s/charts/payment/values.yaml
     steps:
@@ -129,6 +129,12 @@ jobs:
           ref: ${{ github.ref_name }}
 
       - uses: ./.github/workflows/actions
+
+      - name: Set image repository
+        shell: bash
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          echo "IMAGE_REPOSITORY=ghcr.io/${owner}/${IMAGE_NAME}" >> "$GITHUB_ENV"
 
       - name: Prepare Docker build artifact
         run: mvn clean package -pl payment -am -DskipTests
@@ -152,19 +158,21 @@ jobs:
             ${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
             ${{ env.IMAGE_REPOSITORY }}:latest
 
-      - name: Update Helm image tag
+      - name: Update Helm image repository and tag
         run: |
           python - <<'PY'
           import os
           from pathlib import Path
 
           path = Path(os.environ["VALUES_FILE"])
+          repository = os.environ["IMAGE_REPOSITORY"]
           tag = os.environ["IMAGE_TAG"]
           text = path.read_text(encoding="utf-8")
           lines = text.splitlines(keepends=True)
           in_image = False
           image_indent = None
-          updated = False
+          updates = {"repository": repository, "tag": tag}
+          updated = set()
 
           for index, line in enumerate(lines):
               stripped = line.strip()
@@ -183,21 +191,26 @@ jobs:
                   image_indent = None
                   continue
 
-              if stripped.startswith("tag:"):
-                  prefix = line[:indent]
-                  newline = "\r\n" if line.endswith("\r\n") else "\n" if line.endswith("\n") else ""
-                  lines[index] = prefix + "tag: " + tag + newline
-                  updated = True
+              for key, value in updates.items():
+                  if stripped.startswith(key + ":"):
+                      prefix = line[:indent]
+                      newline = "\r\n" if line.endswith("\r\n") else "\n" if line.endswith("\n") else ""
+                      lines[index] = prefix + key + ": " + value + newline
+                      updated.add(key)
+                      break
+
+              if updated == set(updates):
                   break
 
-          if not updated:
-              raise SystemExit("Could not find image.tag in " + str(path))
+          missing = updates.keys() - updated
+          if missing:
+              raise SystemExit("Could not find image." + ",".join(sorted(missing)) + " in " + str(path))
 
           path.write_text("".join(lines), encoding="utf-8")
-          print("Updated " + str(path) + " image tag to " + tag)
+          print("Updated " + str(path) + " image to " + repository + ":" + tag)
           PY
 
-      - name: Commit updated image tag
+      - name: Commit updated image repository and tag
         run: |
           git pull --rebase --autostash origin "$GITHUB_REF_NAME"
 
@@ -209,7 +222,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "$VALUES_FILE"
-          git commit -m "ci: update payment image tag to $IMAGE_TAG"
+          git commit -m "ci: update payment image to $IMAGE_REPOSITORY:$IMAGE_TAG"
 
           for attempt in 1 2 3; do
             if git push origin HEAD:"$GITHUB_REF_NAME"; then
