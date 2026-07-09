@@ -49,8 +49,9 @@ Required Jenkins tools:
 
 - Docker CLI
 - `yq`
-- Java/Maven support for the YAS backend build. The Jenkinsfile uses root
-  `mvn` when available and falls back to each service `mvnw`.
+- Docker access from the Jenkins agent. The Java build runs in
+  `maven:3.9.11-eclipse-temurin-25` because the current root `pom.xml` compiles
+  with Java 25.
 - Node build support is handled inside the UI Dockerfiles
 
 ## Evidence commands for screenshots
