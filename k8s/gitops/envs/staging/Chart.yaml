@@ -1,0 +1,91 @@
+apiVersion: v2
+name: yas-staging
+description: GitOps umbrella chart for the YAS staging environment
+type: application
+version: 0.1.0
+appVersion: "staging"
+
+dependencies:
+  - name: yas-configuration
+    version: 0.4.0
+    repository: file://../../../charts/yas-configuration
+  - name: backend
+    alias: backoffice-bff
+    version: 0.1.0
+    repository: file://../../../charts/backend
+  - name: ui
+    alias: backoffice-ui
+    version: 0.1.0
+    repository: file://../../../charts/ui
+  - name: backend
+    alias: cart
+    version: 0.1.0
+    repository: file://../../../charts/backend
+  - name: backend
+    alias: customer
+    version: 0.1.0
+    repository: file://../../../charts/backend
+  - name: backend
+    alias: inventory
+    version: 0.1.0
+    repository: file://../../../charts/backend
+  - name: backend
+    alias: location
+    version: 0.1.0
+    repository: file://../../../charts/backend
+  - name: backend
+    alias: media
+    version: 0.1.0
+    repository: file://../../../charts/backend
+  - name: backend
+    alias: order
+    version: 0.1.0
+    repository: file://../../../charts/backend
+  - name: backend
+    alias: payment
+    version: 0.1.0
+    repository: file://../../../charts/backend
+  - name: backend
+    alias: payment-paypal
+    version: 0.1.0
+    repository: file://../../../charts/backend
+  - name: backend
+    alias: product
+    version: 0.1.0
+    repository: file://../../../charts/backend
+  - name: backend
+    alias: promotion
+    version: 0.1.0
+    repository: file://../../../charts/backend
+  - name: backend
+    alias: rating
+    version: 0.1.0
+    repository: file://../../../charts/backend
+  - name: backend
+    alias: recommendation
+    version: 0.1.0
+    repository: file://../../../charts/backend
+  - name: backend
+    alias: sampledata
+    version: 0.1.0
+    repository: file://../../../charts/backend
+  - name: backend
+    alias: search
+    version: 0.1.0
+    repository: file://../../../charts/backend
+  - name: backend
+    alias: storefront-bff
+    version: 0.1.0
+    repository: file://../../../charts/backend
+  - name: ui
+    alias: storefront-ui
+    version: 0.1.0
+    repository: file://../../../charts/ui
+  - name: backend
+    alias: tax
+    version: 0.1.0
+    repository: file://../../../charts/backend
+  - name: backend
+    alias: webhook
+    version: 0.1.0
+    repository: file://../../../charts/backend

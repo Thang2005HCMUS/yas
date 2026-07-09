@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">YAS ArgoCD dev and staging GitOps flow</title>
+  <desc id="desc">Git commits and release tags trigger Jenkins, Docker Hub, GitOps values updates, ArgoCD sync, and Kubernetes deployments into dev and staging namespaces.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#243142"/>
+    </marker>
+    <style>
+      .bg { fill: #f7f9fc; }
+      .lane { fill: #ffffff; stroke: #d7dee8; stroke-width: 2; rx: 18; }
+      .box { fill: #ffffff; stroke: #243142; stroke-width: 2; rx: 12; }
+      .dev { fill: #e8f4ff; stroke: #1f77b4; }
+      .staging { fill: #fff4e0; stroke: #c77700; }
+      .git { fill: #eef7ee; stroke: #2f7d32; }
+      .docker { fill: #e7f7fb; stroke: #0d83a5; }
+      .argo { fill: #fff0f2; stroke: #d13f5c; }
+      .k8s { fill: #edf1ff; stroke: #4b63c7; }
+      .text { font-family: Arial, Helvetica, sans-serif; fill: #182230; }
+      .title { font-size: 34px; font-weight: 700; }
+      .label { font-size: 21px; font-weight: 700; }
+      .small { font-size: 17px; }
+      .tiny { font-size: 14px; fill: #526070; }
+      .arrow { stroke: #243142; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+      .dash { stroke-dasharray: 8 8; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1280" height="720"/>
+  <text x="54" y="60" class="text title">YAS GitOps CD with Jenkins, Docker Hub and ArgoCD</text>
+
+  <rect x="50" y="100" width="1180" height="250" class="lane"/>
+  <text x="75" y="136" class="text label">Dev flow: commit to main</text>
+
+  <rect x="90" y="175" width="170" height="92" class="box git"/>
+  <text x="125" y="213" class="text label">Git main</text>
+  <text x="118" y="242" class="text small">commit code</text>
+
+  <rect x="330" y="175" width="170" height="92" class="box"/>
+  <text x="375" y="213" class="text label">Jenkins</text>
+  <text x="355" y="242" class="text small">build SHA tag</text>
+
+  <rect x="570" y="175" width="170" height="92" class="box docker"/>
+  <text x="608" y="213" class="text label">Docker Hub</text>
+  <text x="600" y="242" class="text small">yas-*:a1b2c3</text>
+
+  <rect x="810" y="175" width="170" height="92" class="box git"/>
+  <text x="842" y="213" class="text label">GitOps values</text>
+  <text x="846" y="242" class="text small">envs/dev</text>
+
+  <rect x="1040" y="145" width="150" height="70" class="box argo"/>
+  <text x="1072" y="188" class="text label">ArgoCD</text>
+
+  <rect x="1040" y="245" width="150" height="70" class="box k8s"/>
+  <text x="1060" y="282" class="text label">K8s dev</text>
+  <text x="1074" y="304" class="text tiny">namespace</text>
+
+  <path d="M260 221 H330" class="arrow"/>
+  <path d="M500 221 H570" class="arrow"/>
+  <path d="M740 221 H810" class="arrow"/>
+  <path d="M980 221 C1010 221 1010 180 1040 180" class="arrow"/>
+  <path d="M1115 215 V245" class="arrow"/>
+
+  <rect x="50" y="400" width="1180" height="250" class="lane"/>
+  <text x="75" y="436" class="text label">Staging flow: release tag</text>
+
+  <rect x="90" y="475" width="170" height="92" class="box git"/>
+  <text x="122" y="513" class="text label">Git tag</text>
+  <text x="125" y="542" class="text small">v1.2.3</text>
+
+  <rect x="330" y="475" width="170" height="92" class="box"/>
+  <text x="375" y="513" class="text label">Jenkins</text>
+  <text x="356" y="542" class="text small">build release</text>
+
+  <rect x="570" y="475" width="170" height="92" class="box docker"/>
+  <text x="608" y="513" class="text label">Docker Hub</text>
+  <text x="604" y="542" class="text small">yas-*:v1.2.3</text>
+
+  <rect x="810" y="475" width="170" height="92" class="box git"/>
+  <text x="842" y="513" class="text label">GitOps values</text>
+  <text x="832" y="542" class="text small">envs/staging</text>
+
+  <rect x="1040" y="445" width="150" height="70" class="box argo"/>
+  <text x="1072" y="488" class="text label">ArgoCD</text>
+
+  <rect x="1040" y="545" width="150" height="70" class="box k8s"/>
+  <text x="1047" y="582" class="text label">K8s staging</text>
+  <text x="1074" y="604" class="text tiny">namespace</text>
+
+  <path d="M260 521 H330" class="arrow"/>
+  <path d="M500 521 H570" class="arrow"/>
+  <path d="M740 521 H810" class="arrow"/>
+  <path d="M980 521 C1010 521 1010 480 1040 480" class="arrow"/>
+  <path d="M1115 515 V545" class="arrow"/>
+
+  <path d="M655 267 C655 320 895 320 895 267" class="arrow dash"/>
+  <text x="682" y="318" class="text tiny">Jenkins commits image tags back to Git</text>
+</svg>

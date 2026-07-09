@@ -1,0 +1,351 @@
+backoffice-bff:
+  nameOverride: backoffice-bff
+  fullnameOverride: backoffice-bff
+  serviceMonitor:
+    enabled: false
+  deployment:
+    annotations:
+      configmap.reloader.stakater.com/reload: "yas-gateway-routes-config-configmap,backoffice-bff-extra-configmap"
+  ingress:
+    enabled: true
+    host: backoffice.dev.yas.local.com
+    path: /
+  extraEnvs:
+    - name: SPRING_PROFILES_ACTIVE
+      value: prod
+    - name: UI_HOST
+      value: http://backoffice-ui:3000
+  extraEnvFroms:
+    - secretRef:
+        name: yas-keycloak-credentials-secret
+    - secretRef:
+        name: yas-redis-credentials-secret
+  extraVolumes:
+    - name: yas-gateway-routes-config
+      configMap:
+        name: yas-gateway-routes-config-configmap
+    - name: backoffice-bff-extra-config
+      configMap:
+        name: backoffice-bff-extra-configmap
+  extraVolumeMounts:
+    - name: yas-gateway-routes-config
+      mountPath: /opt/yas/gateway-routes-config
+    - name: backoffice-bff-extra-config
+      mountPath: /opt/yas/extra-config
+  extraApplicationConfigPaths:
+    - /opt/yas/gateway-routes-config/gateway-routes-config.yaml
+    - /opt/yas/extra-config/backoffice-bff-extra-config.yaml
+
+backoffice-ui:
+  nameOverride: backoffice-ui
+  fullnameOverride: backoffice-ui
+  ingress:
+    enabled: false
+    host: backoffice.dev.yas.local.com
+
+cart:
+  nameOverride: cart
+  fullnameOverride: cart
+  databaseName: cart
+  serviceMonitor:
+    enabled: false
+  ingress:
+    enabled: false
+    host: api.dev.yas.local.com
+  extraVolumes:
+    - name: cart-application-config
+      configMap:
+        name: cart-application-configmap
+  extraVolumeMounts:
+    - name: cart-application-config
+      mountPath: /opt/yas/cart
+  extraApplicationConfigPaths:
+    - /opt/yas/cart/cart-application.yaml
+
+customer:
+  nameOverride: customer
+  fullnameOverride: customer
+  databaseName: customer
+  serviceMonitor:
+    enabled: false
+  ingress:
+    enabled: false
+    host: api.dev.yas.local.com
+  extraEnvFroms:
+    - secretRef:
+        name: yas-keycloak-credentials-secret
+  extraVolumes:
+    - name: customer-application
+      configMap:
+        name: customer-application-configmap
+  extraVolumeMounts:
+    - name: customer-application
+      mountPath: /opt/yas/customer
+  extraApplicationConfigPaths:
+    - /opt/yas/customer/customer-application.yaml
+
+inventory:
+  nameOverride: inventory
+  fullnameOverride: inventory
+  databaseName: inventory
+  serviceMonitor:
+    enabled: false
+  ingress:
+    enabled: false
+    host: api.dev.yas.local.com
+
+location:
+  nameOverride: location
+  fullnameOverride: location
+  databaseName: location
+  serviceMonitor:
+    enabled: false
+  ingress:
+    enabled: false
+    host: api.dev.yas.local.com
+
+media:
+  nameOverride: media
+  fullnameOverride: media
+  databaseName: media
+  serviceMonitor:
+    enabled: false
+  ingress:
+    enabled: false
+    host: api.dev.yas.local.com
+  extraVolumes:
+    - name: media-application
+      configMap:
+        name: media-application-configmap
+  extraVolumeMounts:
+    - name: media-application
+      mountPath: /opt/yas/media
+  extraApplicationConfigPaths:
+    - /opt/yas/media/media-application.yaml
+
+order:
+  nameOverride: order
+  fullnameOverride: order
+  databaseName: order
+  serviceMonitor:
+    enabled: false
+  ingress:
+    enabled: false
+    host: api.dev.yas.local.com
+  extraVolumes:
+    - name: order-application-config
+      configMap:
+        name: order-application-configmap
+  extraVolumeMounts:
+    - name: order-application-config
+      mountPath: /opt/yas/order
+  extraApplicationConfigPaths:
+    - /opt/yas/order/order-application.yaml
+
+payment:
+  nameOverride: payment
+  fullnameOverride: payment
+  databaseName: payment
+  serviceMonitor:
+    enabled: false
+  ingress:
+    enabled: false
+    host: api.dev.yas.local.com
+  extraVolumes:
+    - name: payment-application-config
+      configMap:
+        name: payment-application-configmap
+  extraVolumeMounts:
+    - name: payment-application-config
+      mountPath: /opt/yas/payment
+  extraApplicationConfigPaths:
+    - /opt/yas/payment/payment-application.yaml
+
+payment-paypal:
+  nameOverride: payment-paypal
+  fullnameOverride: payment-paypal
+  databaseName: payment-paypal
+  serviceMonitor:
+    enabled: false
+  ingress:
+    enabled: false
+    host: api.dev.yas.local.com
+  extraVolumes:
+    - name: payment-paypal-application-config
+      configMap:
+        name: payment-paypal-application-configmap
+  extraVolumeMounts:
+    - name: payment-paypal-application-config
+      mountPath: /opt/yas/payment-paypal
+  extraApplicationConfigPaths:
+    - /opt/yas/payment-paypal/payment-paypal-application.yaml
+
+product:
+  nameOverride: product
+  fullnameOverride: product
+  databaseName: product
+  serviceMonitor:
+    enabled: false
+  ingress:
+    enabled: false
+    host: api.dev.yas.local.com
+  extraVolumes:
+    - name: product-application-config
+      configMap:
+        name: product-application-configmap
+  extraVolumeMounts:
+    - name: product-application-config
+      mountPath: /opt/yas/product
+  extraApplicationConfigPaths:
+    - /opt/yas/product/product-application.yaml
+
+promotion:
+  nameOverride: promotion
+  fullnameOverride: promotion
+  databaseName: promotion
+  serviceMonitor:
+    enabled: false
+  ingress:
+    enabled: false
+    host: api.dev.yas.local.com
+
+rating:
+  nameOverride: rating
+  fullnameOverride: rating
+  databaseName: rating
+  serviceMonitor:
+    enabled: false
+  ingress:
+    enabled: false
+    host: api.dev.yas.local.com
+
+recommendation:
+  nameOverride: recommendation
+  fullnameOverride: recommendation
+  databaseName: recommendation
+  serviceMonitor:
+    enabled: false
+  ingress:
+    enabled: false
+    host: api.dev.yas.local.com
+  extraEnvFroms:
+    - secretRef:
+        name: yas-openai-api-key-secret
+  extraVolumes:
+    - name: recommendation-application
+      configMap:
+        name: recommendation-application-configmap
+  extraVolumeMounts:
+    - name: recommendation-application
+      mountPath: /opt/yas/recommendation
+  extraApplicationConfigPaths:
+    - /opt/yas/recommendation/recommendation-application.yaml
+
+sampledata:
+  nameOverride: sampledata
+  fullnameOverride: sampledata
+  databaseName: sampledata
+  serviceMonitor:
+    enabled: false
+  ingress:
+    enabled: false
+    host: api.dev.yas.local.com
+  extraVolumes:
+    - name: sampledata-application
+      configMap:
+        name: sampledata-application-configmap
+  extraVolumeMounts:
+    - name: sampledata-application
+      mountPath: /opt/yas/sampledata
+  extraApplicationConfigPaths:
+    - /opt/yas/sampledata/sampledata-application.yaml
+
+search:
+  nameOverride: search
+  fullnameOverride: search
+  databaseName: search
+  serviceMonitor:
+    enabled: false
+  ingress:
+    enabled: false
+    host: api.dev.yas.local.com
+  extraEnvFroms:
+    - secretRef:
+        name: yas-elasticsearch-credentials-secret
+  extraVolumes:
+    - name: search-application
+      configMap:
+        name: search-application-configmap
+  extraVolumeMounts:
+    - name: search-application
+      mountPath: /opt/yas/search
+  extraApplicationConfigPaths:
+    - /opt/yas/search/search-application.yaml
+
+storefront-bff:
+  nameOverride: storefront-bff
+  fullnameOverride: storefront-bff
+  serviceMonitor:
+    enabled: false
+  deployment:
+    annotations:
+      configmap.reloader.stakater.com/reload: "yas-gateway-routes-config-configmap,storefront-bff-extra-configmap"
+  ingress:
+    enabled: true
+    host: storefront.dev.yas.local.com
+    path: /
+  extraEnvs:
+    - name: SPRING_PROFILES_ACTIVE
+      value: prod
+    - name: UI_HOST
+      value: http://storefront-ui:3000
+  extraEnvFroms:
+    - secretRef:
+        name: yas-keycloak-credentials-secret
+    - secretRef:
+        name: yas-redis-credentials-secret
+  extraVolumes:
+    - name: yas-gateway-routes-config
+      configMap:
+        name: yas-gateway-routes-config-configmap
+    - name: storefront-bff-extra-config
+      configMap:
+        name: storefront-bff-extra-configmap
+  extraVolumeMounts:
+    - name: yas-gateway-routes-config
+      mountPath: /opt/yas/gateway-routes-config
+    - name: storefront-bff-extra-config
+      mountPath: /opt/yas/extra-config
+  extraApplicationConfigPaths:
+    - /opt/yas/gateway-routes-config/gateway-routes-config.yaml
+    - /opt/yas/extra-config/storefront-bff-extra-config.yaml
+
+storefront-ui:
+  nameOverride: storefront-ui
+  fullnameOverride: storefront-ui
+  extraEnvs:
+    - name: API_BASE_PATH
+      value: http://storefront.dev.yas.local.com/api
+  ingress:
+    enabled: false
+    host: storefront.dev.yas.local.com
+
+tax:
+  nameOverride: tax
+  fullnameOverride: tax
+  databaseName: tax
+  serviceMonitor:
+    enabled: false
+  ingress:
+    enabled: false
+    host: api.dev.yas.local.com
+
+webhook:
+  nameOverride: webhook
+  fullnameOverride: webhook
+  databaseName: webhook
+  serviceMonitor:
+    enabled: false
+  ingress:
+    enabled: false
+    host: api.dev.yas.local.com
