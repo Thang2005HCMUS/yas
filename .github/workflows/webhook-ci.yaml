@@ -169,7 +169,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           # Thay bằng repo chứa file K8s/Helm của nhóm bạn
-          repository: 'https://github.com/Thang2005HCMUS/yas.git' 
+          repository: 'Thang2005HCMUS/yas.git' 
           # Cần tạo Personal Access Token (PAT) trên Github và lưu vào secret
           token: ${{ secrets.GITHUB_TOKEN }} 
           ref: main
