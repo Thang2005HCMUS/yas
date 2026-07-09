@@ -7,7 +7,7 @@ spec:
   goTemplate: true  # BẮT BUỘC: Thêm dòng này để ArgoCD hiểu lệnh điều kiện if/else
   generators:
     - git:
-        repoURL: https://github.com/Thang2005HCMUS/TestYas
+        repoURL: https://github.com/Thang2005HCMUS/Yas
         revision: main
         directories:
           - path: k8s/charts/*
@@ -41,8 +41,8 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/Thang2005HCMUS/TestYas
-        targetRevision: main
+        repoURL: https://github.com/Thang2005HCMUS/Yas
+        TargetRevision: deploy-observability-infra
         path: '{{ .path.path }}'  # SỬA Ở ĐÂY: Thêm .path để lấy đúng string
         helm:
           valueFiles:

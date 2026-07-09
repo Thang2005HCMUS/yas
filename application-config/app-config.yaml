@@ -10,9 +10,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/Thang2005HCMUS/TestYas.git
+    repoURL: https://github.com/Thang2005HCMUS/Yas.git
     path: k8s/charts/yas-configuration
-    targetRevision: main
+    TargetRevision: deploy-observability-infra
   destination:
     server: https://kubernetes.default.svc
     namespace: yas

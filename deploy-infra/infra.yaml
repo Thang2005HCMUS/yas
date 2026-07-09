@@ -12,9 +12,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/Thang2005HCMUS/TestYas.git
+    repoURL: https://github.com/Thang2005HCMUS/Yas.git
     path: k8s/deploy/postgres/postgresql
-    targetRevision: main
+    TargetRevision: deploy-observability-infra
     helm:
       valueFiles:
         - ./values.yaml
@@ -49,8 +49,8 @@ spec:
       helm:
         valueFiles:
           - $values/k8s/deploy/cluster-config-gitOps.yaml
-    - repoURL: https://github.com/Thang2005HCMUS/TestYas.git
-      targetRevision: main
+    - repoURL: https://github.com/Thang2005HCMUS/Yas.git
+      TargetRevision: deploy-observability-infra
       ref: values
   destination:
     server: https://kubernetes.default.svc
@@ -77,9 +77,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/Thang2005HCMUS/TestYas.git
+    repoURL: https://github.com/Thang2005HCMUS/Yas.git
     path: k8s/deploy/kafka/kafka-cluster
-    targetRevision: main
+    TargetRevision: deploy-observability-infra
     helm:
       valueFiles:
         - ./values.yaml
@@ -108,9 +108,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/Thang2005HCMUS/TestYas.git
+    repoURL: https://github.com/Thang2005HCMUS/Yas.git
     path: k8s/deploy/zookeeper
-    targetRevision: main
+    TargetRevision: deploy-observability-infra
     helm:
       valueFiles:
         - ../cluster-config-gitOps.yaml
@@ -136,9 +136,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/Thang2005HCMUS/TestYas.git
+    repoURL: https://github.com/Thang2005HCMUS/Yas.git
     path: k8s/deploy/elasticsearch/elasticsearch-cluster
-    targetRevision: main
+    TargetRevision: deploy-observability-infra
     helm:
       valueFiles:
         - ../../cluster-config-gitOps.yaml
@@ -166,9 +166,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/Thang2005HCMUS/TestYas.git
+    repoURL: https://github.com/Thang2005HCMUS/Yas.git
     path: k8s/deploy/keycloak/keycloak
-    targetRevision: main
+    TargetRevision: deploy-observability-infra
     helm:
       valueFiles:
         - ../../cluster-config-gitOps.yaml
@@ -194,9 +194,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/Thang2005HCMUS/TestYas.git
+    repoURL: https://github.com/Thang2005HCMUS/Yas.git
     path: k8s/deploy/postgres/pgadmin
-    targetRevision: main
+    TargetRevision: deploy-observability-infra
     helm:
       valueFiles:
         - ../../cluster-config-gitOps.yaml
@@ -229,8 +229,8 @@ spec:
         valueFiles:
           - $values/k8s/deploy/cluster-config-gitOps.yaml
           - $values/k8s/deploy/kafka/akhq.values.yaml
-    - repoURL: https://github.com/Thang2005HCMUS/TestYas.git
-      targetRevision: main
+    - repoURL: https://github.com/Thang2005HCMUS/Yas.git
+      TargetRevision: deploy-observability-infra
       ref: values
   destination:
     server: https://kubernetes.default.svc

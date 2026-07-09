@@ -25,8 +25,8 @@ spec:
             value: "grafana"
           - name: grafana.assertNoLeakedSecrets
             value: "false"
-    - repoURL: https://github.com/Thang2005HCMUS/TestYas.git
-      targetRevision: main
+    - repoURL: https://github.com/Thang2005HCMUS/Yas.git
+      TargetRevision: deploy-observability-infra
       ref: values
   destination:
     server: https://kubernetes.default.svc
@@ -62,8 +62,8 @@ spec:
             value: "loki"
           - name: fullnameOverride
             value: "loki"
-    - repoURL: https://github.com/Thang2005HCMUS/TestYas.git
-      targetRevision: main
+    - repoURL: https://github.com/Thang2005HCMUS/Yas.git
+      TargetRevision: deploy-observability-infra
       ref: values
   destination:
     server: https://kubernetes.default.svc
@@ -97,8 +97,8 @@ spec:
             value: "tempo"
           - name: fullnameOverride
             value: "tempo"
-    - repoURL: https://github.com/Thang2005HCMUS/TestYas.git
-      targetRevision: main
+    - repoURL: https://github.com/Thang2005HCMUS/Yas.git
+      TargetRevision: deploy-observability-infra
       ref: values
   destination:
     server: https://kubernetes.default.svc
@@ -132,8 +132,8 @@ spec:
             value: "promtail"
           - name: fullnameOverride
             value: "promtail"
-    - repoURL: https://github.com/Thang2005HCMUS/TestYas.git
-      targetRevision: main
+    - repoURL: https://github.com/Thang2005HCMUS/Yas.git
+      TargetRevision: deploy-observability-infra
       ref: values
   destination:
     server: https://kubernetes.default.svc
@@ -154,9 +154,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/Thang2005HCMUS/TestYas.git
+    repoURL: https://github.com/Thang2005HCMUS/Yas.git
     path: observability/opentelemetry
-    targetRevision: main
+    TargetRevision: deploy-observability-infra
     helm:
       valueFiles:
         - values.yaml
@@ -181,9 +181,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/Thang2005HCMUS/TestYas.git
+    repoURL: https://github.com/Thang2005HCMUS/Yas.git
     path: observability/grafana
-    targetRevision: main
+    TargetRevision: deploy-observability-infra
     helm:
       valueFiles:
         - values.yaml
