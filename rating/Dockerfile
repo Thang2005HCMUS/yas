@@ -1,3 +1,3 @@
 FROM eclipse-temurin:25-jre-alpine
-COPY target/rating*.jar app.jar
+COPY target/app.jar app.jar
 ENTRYPOINT ["java", "-jar", "/app.jar"]

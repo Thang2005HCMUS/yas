@@ -38,7 +38,9 @@ pipeline {
         script {
           env.SHORT_SHA = sh(returnStdout: true, script: 'git rev-parse --short=12 HEAD').trim()
           def exactTag = sh(returnStdout: true, script: 'git describe --tags --exact-match 2>/dev/null || true').trim()
-          def branchName = env.BRANCH_NAME ?: sh(returnStdout: true, script: 'git rev-parse --abbrev-ref HEAD').trim()
+          def detectedBranch = sh(returnStdout: true, script: 'git rev-parse --abbrev-ref HEAD').trim()
+          def branchName = env.CHANGE_BRANCH ?: env.BRANCH_NAME ?: env.GIT_BRANCH ?: detectedBranch
+          branchName = branchName.replaceFirst(/^origin\\//, '')
           env.GITOPS_BRANCH = env.CHANGE_BRANCH ?: branchName
 
           if (params.DEPLOY_ENV == 'dev') {
@@ -51,6 +53,9 @@ pipeline {
             env.TARGET_ENV = 'staging'
             env.IMAGE_TAG = exactTag
           } else if (branchName == 'main') {
+            env.TARGET_ENV = 'dev'
+            env.IMAGE_TAG = env.SHORT_SHA
+          } else if (branchName.startsWith('feature/')) {
             env.TARGET_ENV = 'dev'
             env.IMAGE_TAG = env.SHORT_SHA
           } else {
@@ -94,6 +99,19 @@ pipeline {
         withCredentials([usernamePassword(credentialsId: env.DOCKERHUB_CREDENTIALS, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_TOKEN')]) {
           sh 'echo "$DOCKER_TOKEN" | docker login -u "$DOCKER_USER" --password-stdin'
         }
+      }
+    }
+
+    stage('Prepare Docker artifacts') {
+      steps {
+        sh '''
+          set -eux
+          for service in backoffice-bff cart customer inventory location media order payment payment-paypal product promotion rating recommendation sampledata search storefront-bff tax webhook; do
+            jar_file="$(find "${service}/target" -maxdepth 1 -type f -name '*.jar' ! -name 'original-*.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar' | sort | head -n 1)"
+            test -n "$jar_file"
+            cp "$jar_file" "${service}/target/app.jar"
+          done
+        '''
       }
     }
 
