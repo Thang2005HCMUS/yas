@@ -172,8 +172,7 @@ jobs:
           repository: 'Thang2005HCMUS/yas.git' 
           # Cần tạo Personal Access Token (PAT) trên Github và lưu vào secret
           token: ${{ secrets.GITHUB_TOKEN }} 
-          ref: main
-
+          ref: Yas-CD
       - name: Update Image Tag in Manifest
         env:
           NEW_TAG: ${{ needs.Docker-Build-Push.outputs.image_tag }}
@@ -202,4 +201,4 @@ jobs:
           # Commit & Push
           git add $FILE_PATH
           git commit -m "Update location image tag to $NEW_TAG for $ENV_FOLDER"
-          git push origin main
+          git push origin Yas-CD
