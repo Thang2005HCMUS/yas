@@ -145,7 +145,7 @@ jobs:
         with:
           name: build-assets-{service}
           
-     - name: Determine Tag
+      - name: Determine Tag
         id: prep
         run: |
           # Nếu là tag (VD: v1.2.3) -> lấy tên tag. Nếu là branch -> lấy short commit sha
