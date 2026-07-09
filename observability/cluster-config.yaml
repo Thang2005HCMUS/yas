@@ -1,0 +1,37 @@
+# cluster-config.yaml
+domain: "yas.local.com"
+
+# Phục vụ cho các app cần thông tin DB
+postgresql:
+  username: "yasadminuser"
+  password: "admin"
+  replicas: 1
+
+# Cấu hình cụ thể cho Grafana (để các chart tự khớp key)
+grafana:
+  hostname: "grafana.yas.local.com"
+  username: "admin"
+  password: "admin"
+  # Map sẵn vào cấu trúc mà kube-prometheus-stack yêu cầu trong grafana.ini
+  grafana.ini:
+    database:
+      user: "yasadminuser"
+      password: "admin"
+
+# Các cấu hình khác giữ nguyên để đồng bộ với cluster
+kafka:
+  replicas: 1
+zookeeper:
+  replicas: 1
+elasticsearch:
+  replicas: 1
+  username: "yas"
+  password: "LarUmB3A49NTg9YmgW4="
+keycloak:
+  bootstrapAdmin:
+    username: "admin"
+    password: "admin"
+  backofficeRedirectUrl: "http://backoffice.yas.local.com"
+  storefrontRedirectUrl: "http://storefront.yas.local.com"
+redis:
+  password: "redis"

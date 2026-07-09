@@ -2,8 +2,8 @@
 set -x
 
 # Auto restart when change configmap or secret
-helm repo add stakater https://stakater.github.io/stakater-charts
-helm repo update
+# helm repo add stakater https://stakater.github.io/stakater-charts
+# helm repo update
 
 read -rd '' DOMAIN \
 < <(yq -r '.domain' ./cluster-config.yaml)
@@ -17,7 +17,7 @@ helm dependency build ../charts/backoffice-ui
 helm upgrade --install backoffice-ui ../charts/backoffice-ui \
 --namespace yas --create-namespace
 
-sleep 60
+# sleep 60
 
 helm dependency build ../charts/storefront-bff
 helm upgrade --install storefront-bff ../charts/storefront-bff \
@@ -34,7 +34,7 @@ helm upgrade --install swagger-ui ../charts/swagger-ui \
 --namespace yas --create-namespace \
 --set ingress.host="api.$DOMAIN"
 
-sleep 20
+# sleep 20
 
 for chart in {"cart","customer","inventory","location","media","order","payment","payment-paypal","product","promotion","rating","search","tax","recommendation","webhook","sampledata"} ; do
     helm dependency build ../charts/"$chart"

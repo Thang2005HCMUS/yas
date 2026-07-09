@@ -7,4 +7,4 @@ backend:
   fullnameOverride: rating
   databaseName: rating
   ingress:
-    enabled: false
+    enabled: true

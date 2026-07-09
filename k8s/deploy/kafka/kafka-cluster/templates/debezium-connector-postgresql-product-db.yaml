@@ -1,7 +1,9 @@
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaConnector
 metadata:
   name: debezium-connector-postgresql-product-db
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
   labels:
     strimzi.io/cluster: debezium-connect-cluster
 spec:

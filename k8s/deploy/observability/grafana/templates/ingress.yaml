@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana-ingress
+  annotations:
+    # Nếu bạn dùng Nginx Ingress Controller, hãy giữ nguyên dòng dưới
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - host: {{ .Values.hostname | quote }} # Sẽ tự động lấy "grafana.yas.local.com" từ values.yaml
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service # Tên Service do Operator tự sinh ra
+                port:
+                  number: 3000 # Cổng mặc định của Grafana

@@ -1,0 +1,341 @@
+./setup-cluster.sh 
++ helm repo add postgres-operator-charts https://opensource.zalando.com/postgres-operator/charts/postgres-operator
+"postgres-operator-charts" already exists with the same configuration, skipping
++ helm repo add strimzi https://strimzi.io/charts/
+"strimzi" already exists with the same configuration, skipping
++ helm repo add akhq https://akhq.io/
+"akhq" already exists with the same configuration, skipping
++ helm repo add elastic https://helm.elastic.co
+"elastic" already exists with the same configuration, skipping
++ helm repo add grafana https://grafana.github.io/helm-charts
+"grafana" already exists with the same configuration, skipping
++ helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+"prometheus-community" already exists with the same configuration, skipping
++ helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+"open-telemetry" already exists with the same configuration, skipping
++ helm repo add jetstack https://charts.jetstack.io
+"jetstack" already exists with the same configuration, skipping
++ helm repo update
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "postgres-operator-charts" chart repository
+...Successfully got an update from the "akhq" chart repository
+...Successfully got an update from the "strimzi" chart repository
+...Successfully got an update from the "open-telemetry" chart repository
+...Successfully got an update from the "elastic" chart repository
+...Successfully got an update from the "stakater" chart repository
+...Successfully got an update from the "jetstack" chart repository
+...Successfully got an update from the "grafana" chart repository
+...Successfully got an update from the "prometheus-community" chart repository
+Update Complete. ⎈Happy Helming!⎈
++ read -rd '' DOMAIN POSTGRESQL_REPLICAS POSTGRESQL_USERNAME POSTGRESQL_PASSWORD KAFKA_REPLICAS ZOOKEEPER_REPLICAS ELASTICSEARCH_REPLICAES GRAFANA_USERNAME GRAFANA_PASSWORD
+++ yq -r '.domain, .postgresql.replicas, .postgresql.username,
+ .postgresql.password, .kafka.replicas, .zookeeper.replicas,
+ .elasticsearch.replicas, .grafana.username, .grafana.password' ./cluster-config.yaml
++ helm upgrade --install postgres-operator postgres-operator-charts/postgres-operator --create-namespace --namespace postgres
+Release "postgres-operator" does not exist. Installing it now.
+NAME: postgres-operator
+LAST DEPLOYED: Thu Jun 11 12:29:28 2026
+NAMESPACE: postgres
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+To verify that postgres-operator has started, run:
+
+  kubectl --namespace=postgres get pods -l "app.kubernetes.io/name=postgres-operator"
++ sleep 15
++ helm upgrade --install postgres ./postgres/postgresql --create-namespace --namespace postgres --set replicas=1 --set username=yasadminuser --set password=admin
+Release "postgres" does not exist. Installing it now.
+NAME: postgres
+LAST DEPLOYED: Thu Jun 11 12:29:44 2026
+NAMESPACE: postgres
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
++ pg_admin_hostname=pgadmin.yas.local.com
++ yq -i '.hostname=env(pg_admin_hostname)' ./postgres/pgadmin/values.yaml
+Error: value for env variable 'pg_admin_hostname' not provided in env()
++ helm upgrade --install pgadmin ./postgres/pgadmin --create-namespace --namespace postgres
+Release "pgadmin" does not exist. Installing it now.
+NAME: pgadmin
+LAST DEPLOYED: Thu Jun 11 12:29:44 2026
+NAMESPACE: postgres
+STATUS: deployed
+REVISION: 1
+NOTES:
+1. Get the application URL by running these commands:
+  http://pgadmin.yas.local.com/
++ helm upgrade --install kafka-operator strimzi/strimzi-kafka-operator --create-namespace --namespace kafka
+Release "kafka-operator" does not exist. Installing it now.
+NAME: kafka-operator
+LAST DEPLOYED: Thu Jun 11 12:29:47 2026
+NAMESPACE: kafka
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+Thank you for installing strimzi-kafka-operator-1.0.0
+
+To create a Kafka cluster refer to the following documentation.
+
+https://strimzi.io/docs/operators/latest/deploying.html#deploying-cluster-operator-helm-chart-str
++ echo 'Waiting for Kafka CRDs to be fully established...'
+Waiting for Kafka CRDs to be fully established...
++ sleep 40
++ helm upgrade --install kafka-cluster ./kafka/kafka-cluster --create-namespace --namespace kafka --set kafka.replicas=1 --set zookeeper.replicas=1 --set postgresql.username=yasadminuser --set postgresql.password=admin
+Release "kafka-cluster" does not exist. Installing it now.
+Error: unable to build kubernetes objects from release manifest: [resource mapping not found for name: "kafka-cluster" namespace: "" from "": no matches for kind "Kafka" in version "kafka.strimzi.io/v1beta2"
+ensure CRDs are installed first, resource mapping not found for name: "debezium-connect-cluster" namespace: "" from "": no matches for kind "KafkaConnect" in version "kafka.strimzi.io/v1beta2"
+ensure CRDs are installed first, resource mapping not found for name: "debezium-connector-postgresql-product-db" namespace: "" from "": no matches for kind "KafkaConnector" in version "kafka.strimzi.io/v1beta2"
+ensure CRDs are installed first]
++ akhq_hostname=akhq.yas.local.com
++ yq -i '.hostname=env(akhq_hostname)' ./kafka/akhq.values.yaml
+: value for env variable 'akhq_hostname' not provided in env()
++ helm upgrade --install akhq akhq/akhq --create-namespace --namespace kafka --values ./kafka/akhq.values.yaml
+Release "akhq" does not exist. Installing it now.
+NAME: akhq
+LAST DEPLOYED: Thu Jun 11 12:30:30 2026
+NAMESPACE: kafka
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+1. Get the application URL by running these commands:
+  http://akhq.yas.local.com/
++ helm upgrade --install elastic-operator elastic/eck-operator --create-namespace --namespace elasticsearch
+Release "elastic-operator" does not exist. Installing it now.
+NAME: elastic-operator
+LAST DEPLOYED: Thu Jun 11 12:30:31 2026
+NAMESPACE: elasticsearch
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+1. Inspect the operator logs by running the following command:
+   kubectl logs -n elasticsearch sts/elastic-operator
++ sleep 15
++ helm upgrade --install elasticsearch-cluster ./elasticsearch/elasticsearch-cluster --create-namespace --namespace elasticsearch --set elasticsearch.replicas=1 --set kibana.ingress.hostname=kibana.yas.local.com
+Release "elasticsearch-cluster" does not exist. Installing it now.
+NAME: elasticsearch-cluster
+LAST DEPLOYED: Thu Jun 11 12:30:48 2026
+NAMESPACE: elasticsearch
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
++ helm upgrade --install loki grafana/loki --create-namespace --namespace observability -f ./observability/loki.values.yaml --set loki.useTestSchema=true
+Release "loki" does not exist. Installing it now.
+NAME: loki
+LAST DEPLOYED: Thu Jun 11 12:30:51 2026
+NAMESPACE: observability
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+***********************************************************************
+ Welcome to Grafana Loki
+ Chart version: 7.0.0
+ Chart Name: loki
+ Loki version: 3.6.7
+***********************************************************************
+
+** Please be patient while the chart is being deployed **
+
+Tip:
+
+  Watch the deployment status using the command: kubectl get pods -w --namespace observability
+
+If pods are taking too long to schedule make sure pod affinity can be fulfilled in the current cluster.
+
+***********************************************************************
+Installed components:
+***********************************************************************
+* gateway
+* minio
+* read
+* write
+* backend
+
+
+***********************************************************************
+Sending logs to Loki
+***********************************************************************
+
+Loki has been configured with a gateway (nginx) to support reads and writes from a single component.
+
+You can send logs from inside the cluster using the cluster DNS:
+
+http://loki-gateway.observability.svc.cluster.local/loki/api/v1/push
+
+You can test to send data from outside the cluster by port-forwarding the gateway to your local machine:
+
+  kubectl port-forward --namespace observability svc/loki-gateway 3100:80 &
+
+And then using http://127.0.0.1:3100/loki/api/v1/push URL as shown below:
+
+```
+curl -H "Content-Type: application/json" -XPOST -s "http://127.0.0.1:3100/loki/api/v1/push"  \
+--data-raw "{\"streams\": [{\"stream\": {\"job\": \"test\"}, \"values\": [[\"$(date +%s)000000000\", \"fizzbuzz\"]]}]}"
+```
+
+Then verify that Loki did receive the data using the following command:
+
+```
+curl "http://127.0.0.1:3100/loki/api/v1/query_range" --data-urlencode 'query={job="test"}' | jq .data.result
+```
+
+***********************************************************************
+Connecting Grafana to Loki
+***********************************************************************
+
+If Grafana operates within the cluster, you'll set up a new Loki datasource by utilizing the following URL:
+
+http://loki-gateway.observability.svc.cluster.local/
++ helm upgrade --install tempo grafana/tempo --create-namespace --namespace observability -f ./observability/tempo.values.yaml
+Release "tempo" does not exist. Installing it now.
+WARNING: This chart is deprecated
+NAME: tempo
+LAST DEPLOYED: Thu Jun 11 12:31:01 2026
+NAMESPACE: observability
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
++ helm upgrade --install cert-manager jetstack/cert-manager --namespace cert-manager --create-namespace --version v1.12.0 --set installCRDs=true --set prometheus.enabled=false --set webhook.timeoutSeconds=4 --set admissionWebhooks.certManager.create=true
+Release "cert-manager" does not exist. Installing it now.
+NAME: cert-manager
+LAST DEPLOYED: Thu Jun 11 12:31:02 2026
+NAMESPACE: cert-manager
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+cert-manager v1.12.0 has been deployed successfully!
+
+In order to begin issuing certificates, you will need to set up a ClusterIssuer
+or Issuer resource (for example, by creating a 'letsencrypt-staging' issuer).
+
+More information on the different types of issuers and how to configure them
+can be found in our documentation:
+
+https://cert-manager.io/docs/configuration/
+
+For information on how to configure cert-manager to automatically provision
+Certificates for Ingress resources, take a look at the `ingress-shim`
+documentation:
+
+https://cert-manager.io/docs/usage/ingress/
++ helm upgrade --install opentelemetry-operator open-telemetry/opentelemetry-operator --create-namespace --namespace observability --wait
+Release "opentelemetry-operator" does not exist. Installing it now.
+NAME: opentelemetry-operator
+LAST DEPLOYED: Thu Jun 11 12:31:21 2026
+NAMESPACE: observability
+STATUS: deployed
+REVISION: 1
+NOTES:
+[WARNING] No resource limits or requests were set. Consider setter resource requests and limits via the `resources` field.
+
+
+opentelemetry-operator has been installed. Check its status by running:
+  kubectl --namespace observability get pods -l "app.kubernetes.io/instance=opentelemetry-operator"
+
+Visit https://github.com/open-telemetry/opentelemetry-operator for instructions on how to create & configure OpenTelemetryCollector and Instrumentation custom resources by using the Operator.
++ echo 'Waiting for OpenTelemetry Operator Webhook to be ready...'
+Waiting for OpenTelemetry Operator Webhook to be ready...
++ sleep 30
++ helm upgrade --install opentelemetry-collector ./observability/opentelemetry --create-namespace --namespace observability
+Release "opentelemetry-collector" does not exist. Installing it now.
+I0611 12:32:08.642984  382265 warnings.go:107] "Warning: OpenTelemetryCollector v1alpha1 is deprecated. Migrate to v1beta1."
+I0611 12:32:08.817098  382265 warnings.go:107] "Warning: OpenTelemetryCollector v1alpha1 is deprecated. Migrate to v1beta1."
+I0611 12:32:08.817136  382265 warnings.go:107] "Warning: Collector config spec.config has null objects: processors.batch:. For compatibility with other tooling, such as kustomize and kubectl edit, it is recommended to use empty objects e.g. batch: {}."
+NAME: opentelemetry-collector
+LAST DEPLOYED: Thu Jun 11 12:32:08 2026
+NAMESPACE: observability
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
++ helm upgrade --install promtail grafana/promtail --create-namespace --namespace observability --values ./observability/promtail.values.yaml
+Release "promtail" does not exist. Installing it now.
+WARNING: This chart is deprecated
+NAME: promtail
+LAST DEPLOYED: Thu Jun 11 12:32:10 2026
+NAMESPACE: observability
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+***********************************************************************
+ Welcome to Grafana Promtail
+ Chart version: 6.17.1
+ Promtail version: 3.5.1
+***********************************************************************
+
+Verify the application is working by running these commands:
+* kubectl --namespace observability port-forward daemonset/promtail 3101
+* curl http://127.0.0.1:3101/metrics
++ grafana_hostname=grafana.yas.local.com
++ yq -i '.hostname=env(grafana_hostname)' ./observability/prometheus.values.yaml
+Error: value for env variable 'grafana_hostname' not provided in env()
++ postgresql_username=yasadminuser
++ yq -i '.grafana."grafana.ini".database.user=env(postgresql_username)' ./observability/prometheus.values.yaml
+Error: value for env variable 'postgresql_username' not provided in env()
++ postgresql_password=admin
++ yq -i '.grafana."grafana.ini".database.password=env(postgresql_password)' ./observability/prometheus.values.yaml
+Error: value for env variable 'postgresql_password' not provided in env()
++ helm upgrade --install prometheus prometheus-community/kube-prometheus-stack --create-namespace --namespace observability -f ./observability/prometheus.values.yaml --set grafana.assertNoLeakedSecrets=false
+Release "prometheus" does not exist. Installing it now.
+NAME: prometheus
+LAST DEPLOYED: Thu Jun 11 12:32:15 2026
+NAMESPACE: observability
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+kube-prometheus-stack has been installed. Check its status by running:
+  kubectl --namespace observability get pods -l "release=prometheus"
+
+Get Grafana 'admin' user password by running:
+
+  kubectl --namespace observability get secrets prometheus-grafana -o jsonpath="{.data.admin-password}" | base64 -d ; echo
+
+Access Grafana local instance:
+
+  export POD_NAME=$(kubectl --namespace observability get pod -l "app.kubernetes.io/name=grafana,app.kubernetes.io/instance=prometheus" -oname)
+  kubectl --namespace observability port-forward $POD_NAME 3000
+
+Get your grafana admin user password by running:
+
+  kubectl get secret --namespace observability -l app.kubernetes.io/component=admin-secret -o jsonpath="{.items[0].data.admin-password}" | base64 --decode ; echo
+
+
+Visit https://github.com/prometheus-operator/kube-prometheus for instructions on how to create & configure Alertmanager and Prometheus instances using the Operator.
++ helm upgrade --install grafana-operator oci://ghcr.io/grafana-operator/helm-charts/grafana-operator --version v5.0.2 --create-namespace --namespace observability
+Release "grafana-operator" does not exist. Installing it now.
+Pulled: ghcr.io/grafana-operator/helm-charts/grafana-operator:v5.0.2
+Digest: sha256:2544a2de962bbe263cdabb389a3e802211fedcad6b784d74150d33f5e40a9fd9
+NAME: grafana-operator
+LAST DEPLOYED: Thu Jun 11 12:32:34 2026
+NAMESPACE: observability
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
++ sleep 30
++ helm upgrade --install grafana ./observability/grafana --create-namespace --namespace observability --set hostname=grafana.yas.local.com --set grafana.username=admin --set grafana.password=admin --set postgresql.username=yasadminuser --set postgresql.password=admin
+Release "grafana" does not exist. Installing it now.
+NAME: grafana
+LAST DEPLOYED: Thu Jun 11 12:33:05 2026
+NAMESPACE: observability
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
++ helm upgrade --install zookeeper ./zookeeper --namespace zookeeper --create-namespace
+Release "zookeeper" does not exist. Installing it now.
+NAME: zookeeper
+LAST DEPLOYED: Thu Jun 11 12:33:05 2026
+NAMESPACE: zookeeper
+STATUS: deployed
+REVISION: 1
+NOTES:
+1. Get the application URL by running these commands:
+  export POD_NAME=$(kubectl get pods --namespace zookeeper -l "app.kubernetes.io/name=zookeeper,app.kubernetes.io/instance=zookeeper" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace zookeeper $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace zookeeper port-forward $POD_NAME 8080:$CONTAINER_PORT

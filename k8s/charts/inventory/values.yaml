@@ -7,4 +7,4 @@ backend:
   fullnameOverride: inventory
   databaseName: inventory
   ingress:
-    enabled: false
+    enabled: true

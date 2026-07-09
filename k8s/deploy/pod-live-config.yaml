@@ -1,0 +1,202 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    strimzi.io/auth-hash: "0"
+    strimzi.io/configuration-hash: 5160cd51
+    strimzi.io/resource-revision: 97d170e1
+    strimzi.io/revision: f1b5ee31
+  creationTimestamp: "2026-06-13T06:41:07Z"
+  generation: 1
+  labels:
+    app.kubernetes.io/instance: debezium-connect-cluster
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: kafka-connect
+    app.kubernetes.io/part-of: strimzi-debezium-connect-cluster
+    strimzi.io/cluster: debezium-connect-cluster
+    strimzi.io/component-type: kafka-connect
+    strimzi.io/controller: strimzipodset
+    strimzi.io/controller-name: debezium-connect-cluster-connect
+    strimzi.io/kind: KafkaConnect
+    strimzi.io/name: debezium-connect-cluster-connect
+    strimzi.io/pod-name: debezium-connect-cluster-connect-0
+  name: debezium-connect-cluster-connect-0
+  namespace: kafka
+  ownerReferences:
+  - apiVersion: core.strimzi.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: StrimziPodSet
+    name: debezium-connect-cluster-connect
+    uid: 3d86f30e-2686-490a-89fe-19904e9e9288
+  resourceVersion: "310817"
+  uid: af29a9fa-5843-450b-baab-872b3b9dbc27
+spec:
+  containers:
+  - args:
+    - /opt/kafka/kafka_connect_run.sh
+    env:
+    - name: KAFKA_CONNECT_JMX_EXPORTER_ENABLED
+      value: "false"
+    - name: STRIMZI_KAFKA_GC_LOG_ENABLED
+      value: "false"
+    - name: KAFKA_HEAP_OPTS
+      value: -Xms128M
+    image: ghcr.io/nashtech-garage/debezium-connect-postgresql:latest
+    imagePullPolicy: Always
+    livenessProbe:
+      failureThreshold: 3
+      httpGet:
+        path: /health
+        port: rest-api
+        scheme: HTTP
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      successThreshold: 1
+      timeoutSeconds: 5
+    name: debezium-connect-cluster-connect
+    ports:
+    - containerPort: 8083
+      name: rest-api
+      protocol: TCP
+    readinessProbe:
+      failureThreshold: 3
+      httpGet:
+        path: /health
+        port: rest-api
+        scheme: HTTP
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      successThreshold: 1
+      timeoutSeconds: 5
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /tmp
+      name: strimzi-tmp
+    - mountPath: /opt/kafka/custom-config/
+      name: kafka-connect-configurations
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-v5q8k
+      readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  hostname: debezium-connect-cluster-connect-0
+  nodeName: minikube
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Always
+  schedulerName: default-scheduler
+  securityContext: {}
+  serviceAccount: debezium-connect-cluster-connect
+  serviceAccountName: debezium-connect-cluster-connect
+  subdomain: debezium-connect-cluster-connect
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+  - emptyDir:
+      medium: Memory
+      sizeLimit: 5Mi
+    name: strimzi-tmp
+  - configMap:
+      defaultMode: 420
+      name: debezium-connect-cluster-connect-config
+    name: kafka-connect-configurations
+  - name: kube-api-access-v5q8k
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2026-06-13T06:41:10Z"
+    observedGeneration: 1
+    status: "True"
+    type: PodReadyToStartContainers
+  - lastProbeTime: null
+    lastTransitionTime: "2026-06-13T06:41:07Z"
+    observedGeneration: 1
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2026-06-13T06:41:07Z"
+    message: 'containers with unready status: [debezium-connect-cluster-connect]'
+    observedGeneration: 1
+    reason: ContainersNotReady
+    status: "False"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2026-06-13T06:41:07Z"
+    message: 'containers with unready status: [debezium-connect-cluster-connect]'
+    observedGeneration: 1
+    reason: ContainersNotReady
+    status: "False"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2026-06-13T06:41:07Z"
+    observedGeneration: 1
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - containerID: docker://214ae0ce3eab302e46bff52214409621a489c46a3180539a1e66618e898a1457
+    image: ghcr.io/nashtech-garage/debezium-connect-postgresql:latest
+    imageID: docker-pullable://ghcr.io/nashtech-garage/debezium-connect-postgresql@sha256:583a724bb9ff3c93e99ac1eff028247b979db24c3d4223fac272ea33054174d7
+    lastState:
+      terminated:
+        containerID: docker://214ae0ce3eab302e46bff52214409621a489c46a3180539a1e66618e898a1457
+        exitCode: 2
+        finishedAt: "2026-06-13T06:41:47Z"
+        reason: Error
+        startedAt: "2026-06-13T06:41:41Z"
+    name: debezium-connect-cluster-connect
+    ready: false
+    resources: {}
+    restartCount: 2
+    started: false
+    state:
+      waiting:
+        message: back-off 20s restarting failed container=debezium-connect-cluster-connect
+          pod=debezium-connect-cluster-connect-0_kafka(af29a9fa-5843-450b-baab-872b3b9dbc27)
+        reason: CrashLoopBackOff
+    volumeMounts:
+    - mountPath: /tmp
+      name: strimzi-tmp
+    - mountPath: /opt/kafka/custom-config/
+      name: kafka-connect-configurations
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-v5q8k
+      readOnly: true
+      recursiveReadOnly: Disabled
+  hostIP: 192.168.49.2
+  hostIPs:
+  - ip: 192.168.49.2
+  observedGeneration: 1
+  phase: Running
+  podIP: 10.244.2.12
+  podIPs:
+  - ip: 10.244.2.12
+  qosClass: BestEffort
+  startTime: "2026-06-13T06:41:07Z"

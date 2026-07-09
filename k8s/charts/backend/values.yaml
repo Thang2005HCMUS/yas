@@ -112,7 +112,7 @@ service:
   port: 80
 
 ingress:
-  enabled: false
+  enabled: true
   className: "nginx"
   annotations: {}
   host: chart-example.local

@@ -7,7 +7,7 @@ backend:
   fullnameOverride: payment-paypal
   databaseName: payment-paypal
   ingress:
-    enabled: false
+    enabled: true
   extraVolumes:
     - name: payment-paypal-application-config
       configMap:

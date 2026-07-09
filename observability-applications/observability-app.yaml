@@ -1,0 +1,200 @@
+# 1. Prometheus Stack
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus-yas
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - chart: kube-prometheus-stack
+      repoURL: https://prometheus-community.github.io/helm-charts
+      targetRevision: "*"
+      helm:
+        valueFiles:
+          - $values/observability/prometheus.values.yaml
+          - $values/observability/cluster-config.yaml
+        parameters:
+          - name: nameOverride
+            value: "prometheus"
+          - name: fullnameOverride
+            value: "prometheus"
+          - name: grafana.nameOverride
+            value: "grafana"
+          - name: grafana.fullnameOverride
+            value: "grafana"
+          - name: grafana.assertNoLeakedSecrets
+            value: "false"
+    - repoURL: https://github.com/Thang2005HCMUS/TestYas.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+
+---
+# 2. Loki
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: loki-yas
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - chart: loki
+      repoURL: https://grafana.github.io/helm-charts
+      targetRevision: "*"
+      helm:
+        valueFiles:
+          - $values/observability/loki.values.yaml
+        parameters:
+          - name: loki.useTestSchema
+            value: "true"
+          - name: nameOverride
+            value: "loki"
+          - name: fullnameOverride
+            value: "loki"
+    - repoURL: https://github.com/Thang2005HCMUS/TestYas.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+
+---
+# 3. Tempo
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tempo-yas
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - chart: tempo
+      repoURL: https://grafana.github.io/helm-charts
+      targetRevision: "*"
+      helm:
+        valueFiles:
+          - $values/observability/tempo.values.yaml
+        parameters:
+          - name: nameOverride
+            value: "tempo"
+          - name: fullnameOverride
+            value: "tempo"
+    - repoURL: https://github.com/Thang2005HCMUS/TestYas.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+
+---
+# 4. Promtail
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: promtail-yas
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - chart: promtail
+      repoURL: https://grafana.github.io/helm-charts
+      targetRevision: "*"
+      helm:
+        valueFiles:
+          - $values/observability/promtail.values.yaml
+        parameters:
+          - name: nameOverride
+            value: "promtail"
+          - name: fullnameOverride
+            value: "promtail"
+    - repoURL: https://github.com/Thang2005HCMUS/TestYas.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+# 5. OpenTelemetry Collector
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: opentelemetry-collector-yas
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Thang2005HCMUS/TestYas.git
+    path: observability/opentelemetry
+    targetRevision: main
+    helm:
+      valueFiles:
+        - values.yaml
+        - cluster-config.yaml # Đường dẫn tương đối trỏ về thư mục gốc chứa cluster-config
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+---
+# 6. Grafana Custom Configs
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana-custom-configs-yas
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Thang2005HCMUS/TestYas.git
+    path: observability/grafana
+    targetRevision: main
+    helm:
+      valueFiles:
+        - values.yaml
+        - ../cluster-config.yaml # Nạp file config
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

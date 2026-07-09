@@ -1,0 +1,55 @@
+global:
+  domain: yas.local.com
+
+postgres:
+  replicas: 1
+  username: yasadminuser
+  password: admin
+
+pgadmin:
+  hostname: pgadmin.yas.local.com
+
+kafka-cluster:
+  kafka:
+    replicas: 1
+  zookeeper:
+    replicas: 1
+  postgresql:
+    username: yasadminuser
+    password: admin
+
+akhq:
+  hostname: akhq.yas.local.com
+
+elasticsearch-cluster:
+  elasticsearch:
+    replicas: 1
+  kibana:
+    ingress:
+      hostname: kibana.yas.local.com
+
+prometheus:
+  grafana:
+    grafana.ini:
+      database:
+        user: yasadminuser
+        password: admin
+
+grafana:
+  hostname: grafana.yas.local.com
+  grafana:
+    username: admin
+    password: admin
+  postgresql:
+    username: yasadminuser
+    password: admin
+
+keycloak:
+  bootstrapAdmin:
+    username: admin
+    password: admin
+  backofficeRedirectUrl: http://backoffice.yas.local.com
+  storefrontRedirectUrl: http://storefront.yas.local.com
+
+redis:
+  password: redis

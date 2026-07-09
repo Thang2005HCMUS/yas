@@ -1,0 +1,194 @@
+# 1. OpenTelemetry Operator (Dùng Helm Chart)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: opentelemetry-operator
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    chart: opentelemetry-operator
+    repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts 
+    targetRevision: 0.66.0 # Phiên bản cụ thể của bạn
+    helm:
+      values: |
+        manager:
+          collectorImage:
+            repository: "ghcr.io/open-telemetry/opentelemetry-collector/opentelemetry-collector"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability 
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true # Bắt buộc thêm dòng này để ArgoCD apply các CRD lớn mà không bị lỗi "metadata annotation too long"
+
+---
+# 2. Grafana Operator (Dùng Helm Chart từ OCI Registry)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana-operator
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    chart: grafana-operator
+    # Thay vì "oci://...", với ArgoCD bạn cấu hình repoURL trỏ thẳng vào registry[cite: 4]
+    repoURL: ghcr.io/grafana-operator/helm-charts 
+    targetRevision: v5.0.2 #[cite: 4]
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability #[cite: 4]
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+# 3. Postgres Operator
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: postgres-operator
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    chart: postgres-operator
+    repoURL: https://opensource.zalando.com/postgres-operator/charts/postgres-operator
+    targetRevision: "*"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: postgres
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+
+---
+# 4. Strimzi Kafka Operator
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: strimzi-kafka-operator
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    chart: strimzi-kafka-operator
+    repoURL: https://strimzi.io/charts/
+    targetRevision: 1.0.0
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kafka
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+
+---
+# 5. Elastic (ECK) Operator
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: elastic-operator
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    chart: eck-operator
+    repoURL: https://helm.elastic.co
+    targetRevision: "*"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: elasticsearch
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+
+---
+# 6. Cert Manager
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    chart: cert-manager
+    repoURL: https://charts.jetstack.io
+    targetRevision: v1.12.0
+    helm:
+      values: |
+        installCRDs: true
+        prometheus:
+          enabled: false
+        webhook:
+          timeoutSeconds: 4
+        admissionWebhooks:
+          certManager:
+            create: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+--- 
+# Keycloak CRDs & Resources Operator
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: keycloak-crds
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/keycloak/keycloak-k8s-resources.git
+    targetRevision: 26.0.2 
+    path: kubernetes
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: keycloak
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true # Nên bật khi cài đặt CRD để tránh lỗi metadata quá dài

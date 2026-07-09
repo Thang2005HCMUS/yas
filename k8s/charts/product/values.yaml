@@ -7,7 +7,7 @@ backend:
   fullnameOverride: product
   databaseName: product
   ingress:
-    enabled: false
+    enabled: true
   extraVolumes:
     - name: product-application-config
       configMap:

@@ -1,3 +1,0 @@
-ALTER TABLE IF EXISTS "checkout"
-ALTER COLUMN customer_id TYPE VARCHAR(255);
-

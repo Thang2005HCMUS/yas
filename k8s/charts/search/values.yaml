@@ -7,7 +7,7 @@ backend:
   fullnameOverride: search
   databaseName: search
   ingress:
-    enabled: false
+    enabled: true
   extraEnvFroms:
     - secretRef:
         name: yas-elasticsearch-credentials-secret

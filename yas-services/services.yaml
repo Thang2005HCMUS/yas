@@ -1,0 +1,81 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: yas-microservices
+  namespace: argocd
+spec:
+  goTemplate: true  # BẮT BUỘC: Thêm dòng này để ArgoCD hiểu lệnh điều kiện if/else
+  generators:
+    - git:
+        repoURL: https://github.com/Thang2005HCMUS/TestYas
+        revision: main
+        directories:
+          - path: k8s/charts/*
+          - path: k8s/charts/Chart.template.yaml
+            exclude: true
+          - path: k8s/charts/values.template.yaml
+            exclude: true
+          - path: k8s/charts/backend
+            exclude: true
+          - path: k8s/charts/ui
+            exclude: true
+          - path: k8s/charts/location
+            exclude: true
+          - path: k8s/charts/payment
+            exclude: true
+          - path: k8s/charts/payment-paypal
+            exclude: true
+          - path: k8s/charts/promotion
+            exclude: true
+          - path: k8s/charts/rating
+            exclude: true
+          - path: k8s/charts/recommendation
+            exclude: true
+          - path: k8s/charts/webhook
+            exclude: true
+          - path: k8s/charts/yas-configuration
+            exclude: true
+  template:
+    metadata:
+      name: 'yas-{{ .path.basename }}'  # SỬA: Thêm dấu chấm trước path
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/Thang2005HCMUS/TestYas
+        targetRevision: main
+        path: '{{ .path.path }}'  # SỬA Ở ĐÂY: Thêm .path để lấy đúng string
+        helm:
+          valueFiles:
+            - values.yaml
+          valuesObject:
+            backend:
+              ingress:
+                enabled: true
+                annotations:
+                  nginx.ingress.kubernetes.io/use-regex: "true"
+                  # Rewrite target vẫn cần thiết để bỏ tiền tố đi khi vào bên trong service
+                  nginx.ingress.kubernetes.io/rewrite-target: /$3
+                
+                host: >-
+                  {{- if eq .path.basename "backoffice-bff" }}backoffice.yas.local.com
+                  {{- else if eq .path.basename "storefront-bff" }}storefront.yas.local.com
+                  {{- else }}api.yas.local.com
+                  {{- end }}
+                
+                # SỬA LẠI ĐÂY: Khôi phục logic /api và thêm oauth2, login
+                path: >-
+                  {{- if or (eq .path.basename "backoffice-bff") (eq .path.basename "storefront-bff") }}/(api|oauth2|login)(/|$)(.*)
+                  {{- else }}/{{ .path.basename }}(/|$)(.*)
+                  {{- end }}
+                pathType: ImplementationSpecific
+            ingress:
+              host: api.yas.local.com
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: yas
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: debezium-connect-cluster
+  namespace: kafka
+  labels:
+    app: debezium-connect
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: debezium-connect
+  template:
+    metadata:
+      labels:
+        app: debezium-connect
+    spec:
+      containers:
+      - name: debezium-connect
+        # Sử dụng image chuẩn của Debezium (Hoặc bản 2.7.3 như project nhỏ của bạn)
+        image: debezium/connect:2.5.4.Final
+        ports:
+        - containerPort: 8083
+          name: api
+        env:
+        # Đường dẫn Bootstrap Service nội bộ của cụm Strimzi hiện tại của bạn
+        - name: BOOTSTRAP_SERVERS
+          value: "kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
+        - name: GROUP_ID
+          value: "debezium-connect-cluster"
+        - name: CONFIG_STORAGE_TOPIC
+          value: "debezium-connect-cluster-configs"
+        - name: OFFSET_STORAGE_TOPIC
+          value: "debezium-connect-cluster-offsets"
+        - name: STATUS_STORAGE_TOPIC
+          value: "debezium-connect-cluster-status"
+        - name: KEY_CONVERTER
+          value: "org.apache.kafka.connect.json.JsonConverter"
+        - name: VALUE_CONVERTER
+          value: "org.apache.kafka.connect.json.JsonConverter"

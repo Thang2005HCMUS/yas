@@ -64,7 +64,7 @@ helm upgrade --install elasticsearch-cluster ./elasticsearch/elasticsearch-clust
 --set elasticsearch.replicas="$ELASTICSEARCH_REPLICAES" \
 --set kibana.ingress.hostname="kibana.$DOMAIN"
 
-#Install loki
+Install loki
 helm upgrade --install loki grafana/loki \
  --create-namespace --namespace observability \
  -f ./observability/loki.values.yaml
@@ -74,7 +74,7 @@ helm upgrade --install tempo grafana/tempo \
 --create-namespace --namespace observability \
 -f ./observability/tempo.values.yaml
 
-#Install cert manager
+Install cert manager
 helm upgrade --install cert-manager jetstack/cert-manager \
   --namespace cert-manager \
   --create-namespace \
@@ -84,7 +84,7 @@ helm upgrade --install cert-manager jetstack/cert-manager \
   --set webhook.timeoutSeconds=4 \
   --set admissionWebhooks.certManager.create=true
 
-#Install opentelemetry-operator
+Install opentelemetry-operator
 helm upgrade --install opentelemetry-operator open-telemetry/opentelemetry-operator \
 --create-namespace --namespace observability
 
@@ -113,7 +113,7 @@ helm upgrade --install grafana-operator oci://ghcr.io/grafana-operator/helm-char
 #Add datasource and dashboard to grafana
 helm upgrade --install grafana ./observability/grafana \
 --create-namespace --namespace observability \
---set hotname="grafana.$DOMAIN" \
+--set hostname="grafana.$DOMAIN" \
 --set grafana.username="$GRAFANA_USERNAME" \
 --set grafana.password="$GRAFANA_PASSWORD" \
 --set postgresql.username="$POSTGRESQL_USERNAME" \

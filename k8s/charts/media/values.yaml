@@ -7,7 +7,7 @@ backend:
   fullnameOverride: media
   databaseName: media
   ingress:
-    enabled: false
+    enabled: true
   extraVolumes:
     - name: media-application
       configMap:

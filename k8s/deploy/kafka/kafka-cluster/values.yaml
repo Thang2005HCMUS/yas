@@ -2,10 +2,49 @@ kafka:
   replicas: 1
 zookeeper:
   replicas: 1
-  storeSize: 5Gi
+  storeSize: 2Gi
 postgresql:
   username: yasadminuser
   password: admin
 debeziumConnect:
-  image: ghcr.io/nashtech-garage/debezium-connect-postgresql:latest
+  image: docker.io/23122051/my-custom-debezium:latest
   buildImage: false #Enabled when build debezium-connect-postgresql image
+
+
+
+
+#   apiVersion: kafka.strimzi.io/v1
+# kind: KafkaConnect
+# metadata:
+#   name: debezium-connect-cluster
+#   annotations:
+#     strimzi.io/use-connector-resources: "true"
+# spec:
+#   replicas: 1
+#   bootstrapServers: kafka-cluster-kafka-bootstrap:9092
+#   # ĐƯA CÁC THÔNG SỐ NÀY RA NGOÀI spec
+#   groupId: connect-cluster
+#   offsetStorageTopic: kafka_connect_offsets
+#   configStorageTopic: kafka_connect_configs
+#   statusStorageTopic: kafka_connect_status
+  
+#   image: {{ .Values.debeziumConnect.image }}
+#   config:
+#     # Các config khác không bắt buộc nằm ở spec thì giữ ở đây
+#     config.providers: secrets
+#     config.providers.secrets.class: io.strimzi.kafka.KubernetesSecretConfigProvider
+#     config.storage.replication.factor: -1
+#     offset.storage.replication.factor: -1
+#     status.storage.replication.factor: -1
+#   {{- if eq .Values.debeziumConnect.buildImage true }}
+#   build:
+#     output:
+#       type: docker
+#       image: my-custom-debezium:latest
+#       pushSecret: docker-registry.secret
+#     plugins:
+#       - name: debezium-postgresql-connector
+#         artifacts:
+#           - type: tgz
+#             url: https://repo1.maven.org/maven2/io/debezium/debezium-connector-postgres/2.3.0.Final/debezium-connector-postgres-2.3.0.Final-plugin.tar.gz
+#   {{- end }}

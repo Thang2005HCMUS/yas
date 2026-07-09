@@ -7,7 +7,7 @@ backend:
   fullnameOverride: order
   databaseName: order
   ingress:
-    enabled: false
+    enabled: true
   extraVolumes:
     - name: order-application-config
       configMap:

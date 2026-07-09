@@ -1,0 +1,11 @@
+kafka:
+  replicas: 1
+zookeeper:
+  replicas: 1
+  storeSize: 2Gi
+postgresql:
+  username: yasadminuser
+  password: admin
+debeziumConnect:
+  image: quay.io/debezium/connect:2.5
+  buildImage: false #Enabled when build debezium-connect-postgresql image

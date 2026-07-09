@@ -1,0 +1,323 @@
+==========grafana/Chart.yaml==========
+apiVersion: v2
+name: grafana
+description: A Helm chart for Kubernetes
+
+# A chart can be either an 'application' or a 'library' chart.
+#
+# Application charts are a collection of templates that can be packaged into versioned archives
+# to be deployed.
+#
+# Library charts provide useful utilities or functions for the chart developer. They're included as
+# a dependency of application charts to inject those utilities and functions into the rendering
+# pipeline. Library charts do not define any templates and therefore cannot be deployed.
+type: application
+
+# This is the chart version. This version number should be incremented each time you make changes
+# to the chart and its templates, including the app version.
+# Versions are expected to follow Semantic Versioning (https://semver.org/)
+version: 0.1.0
+
+# This is the version number of the application being deployed. This version number should be
+# incremented each time you make changes to the application. Versions are not expected to
+# follow Semantic Versioning. They should reflect the version the application is using.
+# It is recommended to use it with quotes.
+appVersion: "1.16.0"
+
+
+==========grafana/templates/dashboards.yaml==========
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: jvm-dashboard
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  url: "https://grafana.com/api/dashboards/4701/revisions/10/download"
+  datasources:
+    - datasourceName: prometheus
+      inputName: DS_PROMETHEUS
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: hikari-cp-dashboard
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  url: "https://grafana.com/api/dashboards/6083/revisions/5/download"
+  datasources:
+    - datasourceName: prometheus
+      inputName: DS_PROMETHEUS
+
+==========grafana/templates/deployment.yaml==========
+
+
+==========grafana/templates/grafana-credentials.secret.yaml==========
+kind: Secret
+apiVersion: v1
+metadata:
+  name: grafana-admin-credentials
+stringData:
+  username: "{{ .Values.grafana.username }}"
+  password: "{{ .Values.grafana.password }}"
+type: Opaque
+
+==========grafana/templates/grafana-service.yaml==========
+
+
+==========grafana/templates/grafana.yaml==========
+apiVersion: grafana.integreatly.org/v1beta1
+kind: Grafana
+metadata:
+  name: grafana
+  labels:
+    dashboards: "grafana"
+  namespace: observability
+spec:
+  # Cấu hình tham chiếu Secret
+  adminUser:
+      name: grafana-admin-credentials
+      key: GF_SECURITY_ADMIN_USER
+  adminPassword:
+      name: grafana-admin-credentials
+      key: GF_SECURITY_ADMIN_PASSWORD
+    
+  # Cấu hình Service để đảm bảo nó được tạo ra
+  service:
+    name: grafana-service
+    port: 3000
+    targetPort: 3000
+    type: ClusterIP
+
+==========grafana/templates/ingress.yaml==========
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana-ingress
+  annotations:
+    # Nếu bạn dùng Nginx Ingress Controller, hãy giữ nguyên dòng dưới
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - host: {{ .Values.hostname | quote }} # Sẽ tự động lấy "grafana.yas.local.com" từ values.yaml
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service # Tên Service do Operator tự sinh ra
+                port:
+                  number: 3000 # Cổng mặc định của Grafana
+
+==========grafana/templates/loki-datasource.yaml==========
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: loki-datasource
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  datasource:
+    name: Loki
+    type: loki
+    uid: loki
+    url: http://loki-gateway
+    access: proxy
+    jsonData:
+      httpMethod: GET
+      maxLines: 1000
+      derivedFields:
+        - datasourceUid: tempo
+          matcherRegex: traceId=(\w*)
+          name: traceId
+          url: ${__value.raw}
+
+==========grafana/templates/tempo-datasource.yaml==========
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: tempo-datasource
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  datasource:
+    name: Tempo
+    type: tempo
+    uid: tempo
+    access: proxy
+    url: http://tempo:3100
+    jsonData:
+      httpMethod: GET
+      tracesToLogsV2:
+        datasourceUid: loki
+      serviceMap:
+        datasourceUid: prometheus
+      nodeGraph:
+        enabled: true
+      search:
+        hide: false
+      lokiSearch:
+        datasourceUid: loki
+
+==========grafana/values.yaml==========
+hostname: grafana.yas.local.com
+grafana:
+  username: admin
+  password: admin
+postgresql:
+  url: postgresql.postgres:5432
+  username: yasadminuser
+  password: admin
+
+==========loki.values.yaml==========
+write:
+  replicas: 1
+read:
+  replicas: 1
+backend:
+  replicas: 1
+loki:
+  commonConfig:
+    replication_factor: 1
+  auth_enabled: false
+test:
+  enabled: false
+storage:
+  type: 'filesystem'
+minio:
+  enabled: true
+
+monitoring:
+  selfMonitoring:
+    enabled: false
+    grafanaAgent:
+      installOperator: false
+
+==========opentelemetry/Chart.yaml==========
+apiVersion: v2
+name: opentelemetry
+description: A Helm chart for Kubernetes
+
+# A chart can be either an 'application' or a 'library' chart.
+#
+# Application charts are a collection of templates that can be packaged into versioned archives
+# to be deployed.
+#
+# Library charts provide useful utilities or functions for the chart developer. They're included as
+# a dependency of application charts to inject those utilities and functions into the rendering
+# pipeline. Library charts do not define any templates and therefore cannot be deployed.
+type: application
+
+# This is the chart version. This version number should be incremented each time you make changes
+# to the chart and its templates, including the app version.
+# Versions are expected to follow Semantic Versioning (https://semver.org/)
+version: 0.1.0
+
+# This is the version number of the application being deployed. This version number should be
+# incremented each time you make changes to the application. Versions are not expected to
+# follow Semantic Versioning. They should reflect the version the application is using.
+# It is recommended to use it with quotes.
+appVersion: "1.16.0"
+
+
+==========opentelemetry/templates/opentelemetry-collector.yaml==========
+apiVersion: opentelemetry.io/v1alpha1
+kind: OpenTelemetryCollector
+metadata:
+  name: opentelemetry
+spec:
+  mode: deployment
+  ports:
+    - name: loki
+      port: 3500
+      protocol: TCP
+      targetPort: 3500
+  config: |
+    {{ toYaml .Values.opentelemetryCollectorConfig | nindent 4 }}
+
+==========opentelemetry/values.yaml==========
+opentelemetryCollectorConfig:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+    loki:
+      protocols:
+        http:
+          endpoint: 0.0.0.0:3500
+      use_incoming_timestamp: true
+  processors:
+    batch:
+    attributes:
+      actions:
+        - action: insert
+          key: loki.attribute.labels
+          value: namespace,container,pod,level,traceId
+        - action: insert
+          key: loki.format
+          value: raw
+
+  exporters:
+  loki:
+    endpoint: "http://loki-gateway.observability.svc.cluster.local/loki/api/v1/push"
+  otlp:
+    endpoint: "tempo-distributor.observability.svc.cluster.local:4317" # Theo chuẩn tên endpoint thông dụng của Tempo Helm mới, hoặc sử dụng "tempo.observability.svc.cluster.local:4317"
+    tls:
+      insecure: true
+  service:
+    pipelines:
+      logs:
+        receivers: [loki]
+        processors: [attributes]
+        exporters: [loki]
+      traces:
+        receivers: [otlp]
+        processors: [batch]
+        exporters: [otlphttp]
+
+==========prometheus.values.yaml==========
+hostname: &hostname grafana.yas.local.com
+prometheus:
+  prometheusSpec:
+    enableRemoteWriteReceiver: true
+grafana:
+  grafana.ini:
+    database:
+      type: postgres
+      host: postgresql.postgres:5432
+      name: grafana
+      user: yasadminuser
+      password: admin
+      ssl_mode: require
+  adminUser: admin
+  adminPassword: admin
+  ingress:
+    ingressClassName: nginx
+    enabled: true
+    hosts:
+      - *hostname
+
+
+==========promtail.values.yaml==========
+config:
+  clients:
+    - url: http://loki-gateway.observability.svc.cluster.local/loki/api/v1/push
+  snippets:
+    pipelineStages:
+      - docker: {}
+
+==========tempo.values.yaml==========
+tempo:
+  metricsGenerator:
+    enabled: true
+    remoteWriteUrl: "http://prometheus-kube-prometheus-prometheus:9090/api/v1/write"
+
