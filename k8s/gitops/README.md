@@ -41,7 +41,8 @@ Use `ci/Jenkinsfile.argocd`.
 Required Jenkins credentials:
 
 - `dockerhub-credentials`: username/password or token for Docker Hub.
-- Git checkout credentials with permission to push to `main`.
+- `github-credentials`: GitHub username/token with permission to push the PR branch.
+  Git checkout should use the same credential.
   In a protected-branch workflow, the Jenkinsfile pushes image-tag updates back
   to the current feature branch, then the team merges through a pull request.
 
@@ -52,7 +53,9 @@ Required Jenkins tools:
 - Docker access from the Jenkins agent. The Java build runs in
   `maven:3.9.11-eclipse-temurin-25` because the current root `pom.xml` compiles
   with Java 25.
-- Node build support is handled inside the UI Dockerfiles
+- Node build support is handled inside the UI Dockerfiles.
+- `yq` is optional. If Jenkins does not have `yq`, `ci/update-gitops-images.sh`
+  runs `mikefarah/yq:4` with Docker.
 
 ## Evidence commands for screenshots
 

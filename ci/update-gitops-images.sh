@@ -20,23 +20,31 @@ if [ "$env_name" != "dev" ] && [ "$env_name" != "staging" ]; then
   exit 2
 fi
 
-if ! command -v yq >/dev/null 2>&1; then
-  echo "yq is required to update ${values_file}" >&2
-  exit 1
-fi
+run_yq() {
+  if command -v yq >/dev/null 2>&1; then
+    yq "$@"
+  elif command -v docker >/dev/null 2>&1 && [ -f /.dockerenv ]; then
+    docker run --rm --volumes-from "$HOSTNAME" -w "$PWD" mikefarah/yq:4 "$@"
+  elif command -v docker >/dev/null 2>&1; then
+    docker run --rm -v "$PWD:/workdir" -w /workdir mikefarah/yq:4 "$@"
+  else
+    echo "Either yq or docker is required to update ${values_file}" >&2
+    exit 1
+  fi
+}
 
 update_backend() {
   chart="$1"
   image="$2"
-  yq -i ".\"${chart}\".image.repository = \"docker.io/${dockerhub_namespace}/${image}\"" "$values_file"
-  yq -i ".\"${chart}\".image.tag = \"${image_tag}\"" "$values_file"
+  run_yq -i ".\"${chart}\".image.repository = \"docker.io/${dockerhub_namespace}/${image}\"" "$values_file"
+  run_yq -i ".\"${chart}\".image.tag = \"${image_tag}\"" "$values_file"
 }
 
 update_ui() {
   chart="$1"
   image="$2"
-  yq -i ".\"${chart}\".image.repository = \"docker.io/${dockerhub_namespace}/${image}\"" "$values_file"
-  yq -i ".\"${chart}\".image.tag = \"${image_tag}\"" "$values_file"
+  run_yq -i ".\"${chart}\".image.repository = \"docker.io/${dockerhub_namespace}/${image}\"" "$values_file"
+  run_yq -i ".\"${chart}\".image.tag = \"${image_tag}\"" "$values_file"
 }
 
 update_backend backoffice-bff yas-backoffice-bff
