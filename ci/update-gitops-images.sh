@@ -24,9 +24,9 @@ run_yq() {
   if command -v yq >/dev/null 2>&1; then
     yq "$@"
   elif command -v docker >/dev/null 2>&1 && [ -f /.dockerenv ]; then
-    docker run --rm --volumes-from "$HOSTNAME" -w "$PWD" mikefarah/yq:4 "$@"
+    docker run --rm --volumes-from "$HOSTNAME" -u "$(id -u):$(id -g)" -w "$PWD" mikefarah/yq:4 "$@"
   elif command -v docker >/dev/null 2>&1; then
-    docker run --rm -v "$PWD:/workdir" -w /workdir mikefarah/yq:4 "$@"
+    docker run --rm -v "$PWD:/workdir" -u "$(id -u):$(id -g)" -w /workdir mikefarah/yq:4 "$@"
   else
     echo "Either yq or docker is required to update ${values_file}" >&2
     exit 1
