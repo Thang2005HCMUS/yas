@@ -1,0 +1,80 @@
+backoffice-bff:
+  image:
+    repository: docker.io/jasonngyn/yas-backoffice-bff
+    tag: 86f861c31cbc
+backoffice-ui:
+  image:
+    repository: docker.io/jasonngyn/yas-backoffice
+    tag: 86f861c31cbc
+cart:
+  image:
+    repository: docker.io/jasonngyn/yas-cart
+    tag: 86f861c31cbc
+customer:
+  image:
+    repository: docker.io/jasonngyn/yas-customer
+    tag: 86f861c31cbc
+inventory:
+  image:
+    repository: docker.io/jasonngyn/yas-inventory
+    tag: 86f861c31cbc
+location:
+  image:
+    repository: docker.io/jasonngyn/yas-location
+    tag: 86f861c31cbc
+media:
+  image:
+    repository: docker.io/jasonngyn/yas-media
+    tag: 86f861c31cbc
+order:
+  image:
+    repository: docker.io/jasonngyn/yas-order
+    tag: 86f861c31cbc
+payment:
+  image:
+    repository: docker.io/jasonngyn/yas-payment
+    tag: 86f861c31cbc
+payment-paypal:
+  image:
+    repository: docker.io/jasonngyn/yas-payment-paypal
+    tag: 86f861c31cbc
+product:
+  image:
+    repository: docker.io/jasonngyn/yas-product
+    tag: 86f861c31cbc
+promotion:
+  image:
+    repository: docker.io/jasonngyn/yas-promotion
+    tag: 86f861c31cbc
+rating:
+  image:
+    repository: docker.io/jasonngyn/yas-rating
+    tag: 86f861c31cbc
+recommendation:
+  image:
+    repository: docker.io/jasonngyn/yas-recommendation
+    tag: 86f861c31cbc
+sampledata:
+  image:
+    repository: docker.io/jasonngyn/yas-sampledata
+    tag: 86f861c31cbc
+search:
+  image:
+    repository: docker.io/jasonngyn/yas-search
+    tag: 86f861c31cbc
+storefront-bff:
+  image:
+    repository: docker.io/jasonngyn/yas-storefront-bff
+    tag: 86f861c31cbc
+storefront-ui:
+  image:
+    repository: docker.io/jasonngyn/yas-storefront
+    tag: 86f861c31cbc
+tax:
+  image:
+    repository: docker.io/jasonngyn/yas-tax
+    tag: 86f861c31cbc
+webhook:
+  image:
+    repository: docker.io/jasonngyn/yas-webhook
+    tag: 86f861c31cbc

@@ -1,0 +1,80 @@
+backoffice-bff:
+  image:
+    repository: docker.io/thang2005hcmus/yas-backoffice-bff
+    tag: v1.2.3
+backoffice-ui:
+  image:
+    repository: docker.io/thang2005hcmus/yas-backoffice
+    tag: v1.2.3
+cart:
+  image:
+    repository: docker.io/thang2005hcmus/yas-cart
+    tag: v1.2.3
+customer:
+  image:
+    repository: docker.io/thang2005hcmus/yas-customer
+    tag: v1.2.3
+inventory:
+  image:
+    repository: docker.io/thang2005hcmus/yas-inventory
+    tag: v1.2.3
+location:
+  image:
+    repository: docker.io/thang2005hcmus/yas-location
+    tag: v1.2.3
+media:
+  image:
+    repository: docker.io/thang2005hcmus/yas-media
+    tag: v1.2.3
+order:
+  image:
+    repository: docker.io/thang2005hcmus/yas-order
+    tag: v1.2.3
+payment:
+  image:
+    repository: docker.io/thang2005hcmus/yas-payment
+    tag: v1.2.3
+payment-paypal:
+  image:
+    repository: docker.io/thang2005hcmus/yas-payment-paypal
+    tag: v1.2.3
+product:
+  image:
+    repository: docker.io/thang2005hcmus/yas-product
+    tag: v1.2.3
+promotion:
+  image:
+    repository: docker.io/thang2005hcmus/yas-promotion
+    tag: v1.2.3
+rating:
+  image:
+    repository: docker.io/thang2005hcmus/yas-rating
+    tag: v1.2.3
+recommendation:
+  image:
+    repository: docker.io/thang2005hcmus/yas-recommendation
+    tag: v1.2.3
+sampledata:
+  image:
+    repository: docker.io/thang2005hcmus/yas-sampledata
+    tag: v1.2.3
+search:
+  image:
+    repository: docker.io/thang2005hcmus/yas-search
+    tag: v1.2.3
+storefront-bff:
+  image:
+    repository: docker.io/thang2005hcmus/yas-storefront-bff
+    tag: v1.2.3
+storefront-ui:
+  image:
+    repository: docker.io/thang2005hcmus/yas-storefront
+    tag: v1.2.3
+tax:
+  image:
+    repository: docker.io/thang2005hcmus/yas-tax
+    tag: v1.2.3
+webhook:
+  image:
+    repository: docker.io/thang2005hcmus/yas-webhook
+    tag: v1.2.3
