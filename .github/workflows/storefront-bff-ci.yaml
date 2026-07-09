@@ -137,12 +137,12 @@ jobs:
         with:
           name: build-assets-storefront-bff
           
-      - name: Determine Tag
+     - name: Determine Tag
         id: prep
         run: |
           # Nếu là tag (VD: v1.2.3) -> lấy tên tag. Nếu là branch -> lấy short commit sha
           if [[ $GITHUB_REF == refs/tags/* ]]; then
-            TAG=${{GITHUB_REF#refs/tags/}}
+            TAG=${GITHUB_REF#refs/tags/}
           else
             TAG=$(echo $GITHUB_SHA | cut -c1-7)
           fi
