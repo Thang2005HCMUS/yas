@@ -189,7 +189,7 @@ jobs:
           # Phân luồng theo branch/tag
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             ENV_FOLDER="staging"
-          elif [[ $GITHUB_REF == refs/heads/main ]]; then
+          elif [[ $GITHUB_REF == refs/heads/Yas-CD ]]; then
             ENV_FOLDER="dev"
           else
             echo "Feature branch, skipping GitOps update."
