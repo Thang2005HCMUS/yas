@@ -21,6 +21,18 @@ pipeline {
   }
 
   stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+        sh '''
+          set -eux
+          pwd
+          test -f pom.xml
+          test -f ci/Jenkinsfile.argocd
+        '''
+      }
+    }
+
     stage('Resolve target') {
       steps {
         script {
