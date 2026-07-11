@@ -1,7 +1,7 @@
 backend:
   image:
     repository: ghcr.io/nashtech-garage/yas-search
-    tag: 0401a30
+    tag: 1c97f99
 
   nameOverride: search
   fullnameOverride: search
