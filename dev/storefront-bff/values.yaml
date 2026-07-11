@@ -1,7 +1,7 @@
 backend:
   image:
     repository: ghcr.io/nashtech-garage/yas-storefront-bff
-    tag: 2298c1a
+    tag: e91d692
 
   nameOverride: storefront-bff
   fullnameOverride: storefront-bff
