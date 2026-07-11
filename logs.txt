@@ -1,0 +1,255 @@
+root@jdk-debug-pod:/workspace/yas/search# java -jar target/search-1.0-SNAPSHOT.jar
+08:23:39,674 + WARN in ch.qos.logback.core.ConsoleAppender[CONSOLE] - [user-system_IS_UNDEFINED.out] should be one of [System.out, System.err]
+08:23:39,674   |-WARN in ch.qos.logback.core.ConsoleAppender[CONSOLE] - Using previously set target, System.out by default.
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.0.2)
+
+2026-07-11T08:23:39.883Z  INFO [search,,] 1587 --- [search] [           main] c.yas.search.ElasticsearchApplication    : Starting ElasticsearchApplication v1.0-SNAPSHOT using Java 25.0.3 with PID 1587 (/workspace/yas/search/target/search-1.0-SNAPSHOT.jar started by root in /workspace/yas/search)
+2026-07-11T08:23:39.883Z  INFO [search,,] 1587 --- [search] [           main] c.yas.search.ElasticsearchApplication    : Starting ElasticsearchApplication v1.0-SNAPSHOT using Java 25.0.3 with PID 1587 (/workspace/yas/search/target/search-1.0-SNAPSHOT.jar started by root in /workspace/yas/search)
+2026-07-11T08:23:39.888Z  INFO [search,,] 1587 --- [search] [           main] c.yas.search.ElasticsearchApplication    : No active profile set, falling back to 1 default profile: "default"
+2026-07-11T08:23:39.888Z  INFO [search,,] 1587 --- [search] [           main] c.yas.search.ElasticsearchApplication    : No active profile set, falling back to 1 default profile: "default"
+2026-07-11T08:23:41.835Z  INFO [search,,] 1587 --- [search] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Elasticsearch repositories in DEFAULT mode.
+2026-07-11T08:23:41.835Z  INFO [search,,] 1587 --- [search] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Elasticsearch repositories in DEFAULT mode.
+2026-07-11T08:23:41.908Z  INFO [search,,] 1587 --- [search] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 60 ms. Found 1 Elasticsearch repository interface.
+2026-07-11T08:23:41.908Z  INFO [search,,] 1587 --- [search] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 60 ms. Found 1 Elasticsearch repository interface.
+2026-07-11T08:23:44.905Z  INFO [search,,] 1587 --- [search] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8092 (http)
+2026-07-11T08:23:44.905Z  INFO [search,,] 1587 --- [search] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8092 (http)
+2026-07-11T08:23:44.928Z  INFO [search,,] 1587 --- [search] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-07-11T08:23:44.928Z  INFO [search,,] 1587 --- [search] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-07-11T08:23:44.929Z  INFO [search,,] 1587 --- [search] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.15]
+2026-07-11T08:23:44.929Z  INFO [search,,] 1587 --- [search] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.15]
+2026-07-11T08:23:44.980Z  INFO [search,,] 1587 --- [search] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 4978 ms
+2026-07-11T08:23:44.980Z  INFO [search,,] 1587 --- [search] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 4978 ms
+2026-07-11T08:23:47.658Z  INFO [search,,] 1587 --- [search] [ient-0-thread-1] c.y.s.config.ElasticsearchDebugConfig    : >>>>>>> PRINTING OUTBOUND HTTP REQUEST TO ES >>>>>>>
+2026-07-11T08:23:47.658Z  INFO [search,,] 1587 --- [search] [ient-0-thread-1] c.y.s.config.ElasticsearchDebugConfig    : >>>>>>> PRINTING OUTBOUND HTTP REQUEST TO ES >>>>>>>
+2026-07-11T08:23:47.659Z  INFO [search,,] 1587 --- [search] [ient-0-thread-1] c.y.s.config.ElasticsearchDebugConfig    : Request Line: HEAD /product
+2026-07-11T08:23:47.659Z  INFO [search,,] 1587 --- [search] [ient-0-thread-1] c.y.s.config.ElasticsearchDebugConfig    : Request Line: HEAD /product
+2026-07-11T08:23:47.660Z  INFO [search,,] 1587 --- [search] [ient-0-thread-1] c.y.s.config.ElasticsearchDebugConfig    : Header -> Content-Type: application/vnd.elasticsearch+json; compatible-with=9
+2026-07-11T08:23:47.660Z  INFO [search,,] 1587 --- [search] [ient-0-thread-1] c.y.s.config.ElasticsearchDebugConfig    : Header -> Content-Type: application/vnd.elasticsearch+json; compatible-with=9
+2026-07-11T08:23:47.661Z  INFO [search,,] 1587 --- [search] [ient-0-thread-1] c.y.s.config.ElasticsearchDebugConfig    : Header -> User-Agent: elastic-java/9.2.3 (Java/25.0.3)
+2026-07-11T08:23:47.661Z  INFO [search,,] 1587 --- [search] [ient-0-thread-1] c.y.s.config.ElasticsearchDebugConfig    : Header -> User-Agent: elastic-java/9.2.3 (Java/25.0.3)
+2026-07-11T08:23:47.661Z  INFO [search,,] 1587 --- [search] [ient-0-thread-1] c.y.s.config.ElasticsearchDebugConfig    : Header -> Accept: application/vnd.elasticsearch+json; compatible-with=9
+2026-07-11T08:23:47.661Z  INFO [search,,] 1587 --- [search] [ient-0-thread-1] c.y.s.config.ElasticsearchDebugConfig    : Header -> Accept: application/vnd.elasticsearch+json; compatible-with=9
+2026-07-11T08:23:47.661Z  INFO [search,,] 1587 --- [search] [ient-0-thread-1] c.y.s.config.ElasticsearchDebugConfig    : Header -> X-SpringDataElasticsearch-Client: spring-data-elasticsearch 6.0.2 / elasticsearch client 9.2.3 / imperative
+2026-07-11T08:23:47.661Z  INFO [search,,] 1587 --- [search] [ient-0-thread-1] c.y.s.config.ElasticsearchDebugConfig    : Header -> X-SpringDataElasticsearch-Client: spring-data-elasticsearch 6.0.2 / elasticsearch client 9.2.3 / imperative
+2026-07-11T08:23:47.661Z  INFO [search,,] 1587 --- [search] [ient-0-thread-1] c.y.s.config.ElasticsearchDebugConfig    : Header -> X-Elastic-Client-Meta: es=9.2.3,jv=25,t=9.2.3,hl=2,hc=5.3.6,kt=2.2,sde=6.0
+2026-07-11T08:23:47.661Z  INFO [search,,] 1587 --- [search] [ient-0-thread-1] c.y.s.config.ElasticsearchDebugConfig    : Header -> X-Elastic-Client-Meta: es=9.2.3,jv=25,t=9.2.3,hl=2,hc=5.3.6,kt=2.2,sde=6.0
+2026-07-11T08:23:47.662Z  INFO [search,,] 1587 --- [search] [ient-0-thread-1] c.y.s.config.ElasticsearchDebugConfig    : Header -> Authorization: Basic eWFzOkxhclVtQjNBNDlOVGc5WW1nVzQ9
+2026-07-11T08:23:47.662Z  INFO [search,,] 1587 --- [search] [ient-0-thread-1] c.y.s.config.ElasticsearchDebugConfig    : Header -> Authorization: Basic eWFzOkxhclVtQjNBNDlOVGc5WW1nVzQ9
+2026-07-11T08:23:47.663Z  INFO [search,,] 1587 --- [search] [ient-0-thread-1] c.y.s.config.ElasticsearchDebugConfig    : <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+2026-07-11T08:23:47.663Z  INFO [search,,] 1587 --- [search] [ient-0-thread-1] c.y.s.config.ElasticsearchDebugConfig    : <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+2026-07-11T08:23:47.702Z  WARN [search,,] 1587 --- [search] [           main] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'productSyncDataConsumer' defined in URL [jar:nested:/workspace/yas/search/target/search-1.0-SNAPSHOT.jar/!BOOT-INF/classes/!/com/yas/search/kafka/consumer/ProductSyncDataConsumer.class]: Unsatisfied dependency expressed through constructor parameter 0: Error creating bean with name 'productSyncDataService' defined in URL [jar:nested:/workspace/yas/search/target/search-1.0-SNAPSHOT.jar/!BOOT-INF/classes/!/com/yas/search/service/ProductSyncDataService.class]: Unsatisfied dependency expressed through constructor parameter 2: Error creating bean with name 'productRepository' defined in com.yas.search.repository.ProductRepository defined in @EnableElasticsearchRepositories declared on ImperativeClientConfig: Failed to instantiate [org.springframework.data.elasticsearch.repository.support.SimpleElasticsearchRepository]: Constructor threw exception
+2026-07-11T08:23:47.702Z  WARN [search,,] 1587 --- [search] [           main] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'productSyncDataConsumer' defined in URL [jar:nested:/workspace/yas/search/target/search-1.0-SNAPSHOT.jar/!BOOT-INF/classes/!/com/yas/search/kafka/consumer/ProductSyncDataConsumer.class]: Unsatisfied dependency expressed through constructor parameter 0: Error creating bean with name 'productSyncDataService' defined in URL [jar:nested:/workspace/yas/search/target/search-1.0-SNAPSHOT.jar/!BOOT-INF/classes/!/com/yas/search/service/ProductSyncDataService.class]: Unsatisfied dependency expressed through constructor parameter 2: Error creating bean with name 'productRepository' defined in com.yas.search.repository.ProductRepository defined in @EnableElasticsearchRepositories declared on ImperativeClientConfig: Failed to instantiate [org.springframework.data.elasticsearch.repository.support.SimpleElasticsearchRepository]: Constructor threw exception
+2026-07-11T08:23:47.720Z  INFO [search,,] 1587 --- [search] [           main] o.apache.catalina.core.StandardService   : Stopping service [Tomcat]
+2026-07-11T08:23:47.720Z  INFO [search,,] 1587 --- [search] [           main] o.apache.catalina.core.StandardService   : Stopping service [Tomcat]
+2026-07-11T08:23:47.750Z  INFO [search,,] 1587 --- [search] [           main] .s.b.a.l.ConditionEvaluationReportLogger : 
+
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2026-07-11T08:23:47.750Z  INFO [search,,] 1587 --- [search] [           main] .s.b.a.l.ConditionEvaluationReportLogger : 
+
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2026-07-11T08:23:47.778Z ERROR [search,,] 1587 --- [search] [           main] o.s.boot.SpringApplication               : Application run failed
+
+org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'productSyncDataConsumer' defined in URL [jar:nested:/workspace/yas/search/target/search-1.0-SNAPSHOT.jar/!BOOT-INF/classes/!/com/yas/search/kafka/consumer/ProductSyncDataConsumer.class]: Unsatisfied dependency expressed through constructor parameter 0: Error creating bean with name 'productSyncDataService' defined in URL [jar:nested:/workspace/yas/search/target/search-1.0-SNAPSHOT.jar/!BOOT-INF/classes/!/com/yas/search/service/ProductSyncDataService.class]: Unsatisfied dependency expressed through constructor parameter 2: Error creating bean with name 'productRepository' defined in com.yas.search.repository.ProductRepository defined in @EnableElasticsearchRepositories declared on ImperativeClientConfig: Failed to instantiate [org.springframework.data.elasticsearch.repository.support.SimpleElasticsearchRepository]: Constructor threw exception
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:804)
+	at org.springframework.beans.factory.support.ConstructorResolver.autowireConstructor(ConstructorResolver.java:240)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.autowireConstructor(AbstractAutowireCapableBeanFactory.java:1382)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1221)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:565)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:525)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:333)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:371)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:331)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:196)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.instantiateSingleton(DefaultListableBeanFactory.java:1218)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.preInstantiateSingleton(DefaultListableBeanFactory.java:1184)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.preInstantiateSingletons(DefaultListableBeanFactory.java:1121)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:993)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:620)
+	at org.springframework.boot.web.server.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:143)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:756)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:445)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:321)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1365)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1354)
+	at com.yas.search.ElasticsearchApplication.main(ElasticsearchApplication.java:23)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:106)
+	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:64)
+	at org.springframework.boot.loader.launch.JarLauncher.main(JarLauncher.java:40)
+Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'productSyncDataService' defined in URL [jar:nested:/workspace/yas/search/target/search-1.0-SNAPSHOT.jar/!BOOT-INF/classes/!/com/yas/search/service/ProductSyncDataService.class]: Unsatisfied dependency expressed through constructor parameter 2: Error creating bean with name 'productRepository' defined in com.yas.search.repository.ProductRepository defined in @EnableElasticsearchRepositories declared on ImperativeClientConfig: Failed to instantiate [org.springframework.data.elasticsearch.repository.support.SimpleElasticsearchRepository]: Constructor threw exception
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:804)
+	at org.springframework.beans.factory.support.ConstructorResolver.autowireConstructor(ConstructorResolver.java:240)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.autowireConstructor(AbstractAutowireCapableBeanFactory.java:1382)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1221)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:565)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:525)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:333)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:371)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:331)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:201)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveBean(DefaultListableBeanFactory.java:1225)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1704)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1651)
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:912)
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:791)
+	... 26 common frames omitted
+Caused by: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'productRepository' defined in com.yas.search.repository.ProductRepository defined in @EnableElasticsearchRepositories declared on ImperativeClientConfig: Failed to instantiate [org.springframework.data.elasticsearch.repository.support.SimpleElasticsearchRepository]: Constructor threw exception
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1817)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:603)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:525)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:333)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:371)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:331)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:201)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveBean(DefaultListableBeanFactory.java:1225)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1704)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1651)
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:912)
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:791)
+	... 40 common frames omitted
+Caused by: org.springframework.beans.BeanInstantiationException: Failed to instantiate [org.springframework.data.elasticsearch.repository.support.SimpleElasticsearchRepository]: Constructor threw exception
+	at org.springframework.beans.BeanUtils.instantiateClass(BeanUtils.java:220)
+	at org.springframework.data.repository.core.support.RepositoryFactorySupport.instantiateClass(RepositoryFactorySupport.java:623)
+	at org.springframework.data.repository.core.support.RepositoryFactorySupport.getTargetRepositoryViaReflection(RepositoryFactorySupport.java:600)
+	at org.springframework.data.elasticsearch.repository.support.ElasticsearchRepositoryFactory.getTargetRepository(ElasticsearchRepositoryFactory.java:81)
+	at org.springframework.data.repository.core.support.RepositoryFactorySupport.getRepository(RepositoryFactorySupport.java:359)
+	at org.springframework.data.repository.core.support.RepositoryFactoryBeanSupport.lambda$afterPropertiesSet$1(RepositoryFactoryBeanSupport.java:361)
+	at org.springframework.data.util.Lazy.getNullable(Lazy.java:136)
+	at org.springframework.data.util.Lazy.get(Lazy.java:114)
+	at org.springframework.data.repository.core.support.RepositoryFactoryBeanSupport.afterPropertiesSet(RepositoryFactoryBeanSupport.java:370)
+	at org.springframework.data.elasticsearch.repository.support.ElasticsearchRepositoryFactoryBean.afterPropertiesSet(ElasticsearchRepositoryFactoryBean.java:69)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1864)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1813)
+	... 51 common frames omitted
+Caused by: org.springframework.dao.DataAccessResourceFailureException: node: http://elasticsearch-es-http.elasticsearch:9200/, status: 400, [es/indices.exists] Expecting a response body, but none was sent
+	at org.springframework.data.elasticsearch.client.elc.ElasticsearchExceptionTranslator.translateExceptionIfPossible(ElasticsearchExceptionTranslator.java:116)
+	at org.springframework.data.elasticsearch.client.elc.ElasticsearchExceptionTranslator.translateException(ElasticsearchExceptionTranslator.java:70)
+	at org.springframework.data.elasticsearch.client.elc.ChildTemplate.execute(ChildTemplate.java:73)
+	at org.springframework.data.elasticsearch.client.elc.IndicesTemplate.doExists(IndicesTemplate.java:180)
+	at org.springframework.data.elasticsearch.client.elc.IndicesTemplate.exists(IndicesTemplate.java:172)
+	at org.springframework.data.elasticsearch.repository.support.SimpleElasticsearchRepository.createIndexAndMappingIfNeeded(SimpleElasticsearchRepository.java:92)
+	at org.springframework.data.elasticsearch.repository.support.SimpleElasticsearchRepository.<init>(SimpleElasticsearchRepository.java:86)
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:483)
+	at org.springframework.beans.BeanUtils.instantiateClass(BeanUtils.java:207)
+	... 62 common frames omitted
+Caused by: java.lang.RuntimeException: node: http://elasticsearch-es-http.elasticsearch:9200/, status: 400, [es/indices.exists] Expecting a response body, but none was sent
+	at org.springframework.data.elasticsearch.client.elc.ElasticsearchExceptionTranslator.translateException(ElasticsearchExceptionTranslator.java:69)
+	... 71 common frames omitted
+Caused by: co.elastic.clients.transport.TransportException: node: http://elasticsearch-es-http.elasticsearch:9200/, status: 400, [es/indices.exists] Expecting a response body, but none was sent
+	at co.elastic.clients.transport.ElasticsearchTransportBase.getApiResponse(ElasticsearchTransportBase.java:357)
+	at co.elastic.clients.transport.ElasticsearchTransportBase.performRequest(ElasticsearchTransportBase.java:154)
+	at co.elastic.clients.elasticsearch.indices.ElasticsearchIndicesClient.exists(ElasticsearchIndicesClient.java:1213)
+	at org.springframework.data.elasticsearch.client.elc.IndicesTemplate.lambda$doExists$0(IndicesTemplate.java:180)
+	at org.springframework.data.elasticsearch.client.elc.ChildTemplate.execute(ChildTemplate.java:71)
+	... 70 common frames omitted
+
+2026-07-11T08:23:47.778Z ERROR [search,,] 1587 --- [search] [           main] o.s.boot.SpringApplication               : Application run failed
+
+org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'productSyncDataConsumer' defined in URL [jar:nested:/workspace/yas/search/target/search-1.0-SNAPSHOT.jar/!BOOT-INF/classes/!/com/yas/search/kafka/consumer/ProductSyncDataConsumer.class]: Unsatisfied dependency expressed through constructor parameter 0: Error creating bean with name 'productSyncDataService' defined in URL [jar:nested:/workspace/yas/search/target/search-1.0-SNAPSHOT.jar/!BOOT-INF/classes/!/com/yas/search/service/ProductSyncDataService.class]: Unsatisfied dependency expressed through constructor parameter 2: Error creating bean with name 'productRepository' defined in com.yas.search.repository.ProductRepository defined in @EnableElasticsearchRepositories declared on ImperativeClientConfig: Failed to instantiate [org.springframework.data.elasticsearch.repository.support.SimpleElasticsearchRepository]: Constructor threw exception
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:804)
+	at org.springframework.beans.factory.support.ConstructorResolver.autowireConstructor(ConstructorResolver.java:240)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.autowireConstructor(AbstractAutowireCapableBeanFactory.java:1382)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1221)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:565)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:525)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:333)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:371)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:331)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:196)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.instantiateSingleton(DefaultListableBeanFactory.java:1218)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.preInstantiateSingleton(DefaultListableBeanFactory.java:1184)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.preInstantiateSingletons(DefaultListableBeanFactory.java:1121)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:993)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:620)
+	at org.springframework.boot.web.server.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:143)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:756)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:445)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:321)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1365)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1354)
+	at com.yas.search.ElasticsearchApplication.main(ElasticsearchApplication.java:23)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:106)
+	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:64)
+	at org.springframework.boot.loader.launch.JarLauncher.main(JarLauncher.java:40)
+Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'productSyncDataService' defined in URL [jar:nested:/workspace/yas/search/target/search-1.0-SNAPSHOT.jar/!BOOT-INF/classes/!/com/yas/search/service/ProductSyncDataService.class]: Unsatisfied dependency expressed through constructor parameter 2: Error creating bean with name 'productRepository' defined in com.yas.search.repository.ProductRepository defined in @EnableElasticsearchRepositories declared on ImperativeClientConfig: Failed to instantiate [org.springframework.data.elasticsearch.repository.support.SimpleElasticsearchRepository]: Constructor threw exception
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:804)
+	at org.springframework.beans.factory.support.ConstructorResolver.autowireConstructor(ConstructorResolver.java:240)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.autowireConstructor(AbstractAutowireCapableBeanFactory.java:1382)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1221)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:565)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:525)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:333)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:371)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:331)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:201)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveBean(DefaultListableBeanFactory.java:1225)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1704)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1651)
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:912)
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:791)
+	... 26 common frames omitted
+Caused by: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'productRepository' defined in com.yas.search.repository.ProductRepository defined in @EnableElasticsearchRepositories declared on ImperativeClientConfig: Failed to instantiate [org.springframework.data.elasticsearch.repository.support.SimpleElasticsearchRepository]: Constructor threw exception
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1817)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:603)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:525)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:333)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:371)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:331)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:201)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveBean(DefaultListableBeanFactory.java:1225)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1704)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1651)
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:912)
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:791)
+	... 40 common frames omitted
+Caused by: org.springframework.beans.BeanInstantiationException: Failed to instantiate [org.springframework.data.elasticsearch.repository.support.SimpleElasticsearchRepository]: Constructor threw exception
+	at org.springframework.beans.BeanUtils.instantiateClass(BeanUtils.java:220)
+	at org.springframework.data.repository.core.support.RepositoryFactorySupport.instantiateClass(RepositoryFactorySupport.java:623)
+	at org.springframework.data.repository.core.support.RepositoryFactorySupport.getTargetRepositoryViaReflection(RepositoryFactorySupport.java:600)
+	at org.springframework.data.elasticsearch.repository.support.ElasticsearchRepositoryFactory.getTargetRepository(ElasticsearchRepositoryFactory.java:81)
+	at org.springframework.data.repository.core.support.RepositoryFactorySupport.getRepository(RepositoryFactorySupport.java:359)
+	at org.springframework.data.repository.core.support.RepositoryFactoryBeanSupport.lambda$afterPropertiesSet$1(RepositoryFactoryBeanSupport.java:361)
+	at org.springframework.data.util.Lazy.getNullable(Lazy.java:136)
+	at org.springframework.data.util.Lazy.get(Lazy.java:114)
+	at org.springframework.data.repository.core.support.RepositoryFactoryBeanSupport.afterPropertiesSet(RepositoryFactoryBeanSupport.java:370)
+	at org.springframework.data.elasticsearch.repository.support.ElasticsearchRepositoryFactoryBean.afterPropertiesSet(ElasticsearchRepositoryFactoryBean.java:69)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1864)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1813)
+	... 51 common frames omitted
+Caused by: org.springframework.dao.DataAccessResourceFailureException: node: http://elasticsearch-es-http.elasticsearch:9200/, status: 400, [es/indices.exists] Expecting a response body, but none was sent
+	at org.springframework.data.elasticsearch.client.elc.ElasticsearchExceptionTranslator.translateExceptionIfPossible(ElasticsearchExceptionTranslator.java:116)
+	at org.springframework.data.elasticsearch.client.elc.ElasticsearchExceptionTranslator.translateException(ElasticsearchExceptionTranslator.java:70)
+	at org.springframework.data.elasticsearch.client.elc.ChildTemplate.execute(ChildTemplate.java:73)
+	at org.springframework.data.elasticsearch.client.elc.IndicesTemplate.doExists(IndicesTemplate.java:180)
+	at org.springframework.data.elasticsearch.client.elc.IndicesTemplate.exists(IndicesTemplate.java:172)
+	at org.springframework.data.elasticsearch.repository.support.SimpleElasticsearchRepository.createIndexAndMappingIfNeeded(SimpleElasticsearchRepository.java:92)
+	at org.springframework.data.elasticsearch.repository.support.SimpleElasticsearchRepository.<init>(SimpleElasticsearchRepository.java:86)
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:483)
+	at org.springframework.beans.BeanUtils.instantiateClass(BeanUtils.java:207)
+	... 62 common frames omitted
+Caused by: java.lang.RuntimeException: node: http://elasticsearch-es-http.elasticsearch:9200/, status: 400, [es/indices.exists] Expecting a response body, but none was sent
+	at org.springframework.data.elasticsearch.client.elc.ElasticsearchExceptionTranslator.translateException(ElasticsearchExceptionTranslator.java:69)
+	... 71 common frames omitted
+Caused by: co.elastic.clients.transport.TransportException: node: http://elasticsearch-es-http.elasticsearch:9200/, status: 400, [es/indices.exists] Expecting a response body, but none was sent
+	at co.elastic.clients.transport.ElasticsearchTransportBase.getApiResponse(ElasticsearchTransportBase.java:357)
+	at co.elastic.clients.transport.ElasticsearchTransportBase.performRequest(ElasticsearchTransportBase.java:154)
+	at co.elastic.clients.elasticsearch.indices.ElasticsearchIndicesClient.exists(ElasticsearchIndicesClient.java:1213)
+	at org.springframework.data.elasticsearch.client.elc.IndicesTemplate.lambda$doExists$0(IndicesTemplate.java:180)
+	at org.springframework.data.elasticsearch.client.elc.ChildTemplate.execute(ChildTemplate.java:71)
+	... 70 common frames omitted
+curl -v -u yas:LarUmB3A49NTg9YmgW4= http://elasticsearch-es-http.elasticsearch:9200/product -X HEAD

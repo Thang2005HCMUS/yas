@@ -33,6 +33,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class ProductService {
+    
     private final ElasticsearchOperations elasticsearchOperations;
     private static final String FUZZINESS_ONE = "1";
 
