@@ -160,8 +160,8 @@ jobs:
           context: ./media
           push: true
           tags: |
-            ${ secrets.DOCKERHUB_USERNAME }/yas-media:${ steps.prep.outputs.TAG }
-            ${ secrets.DOCKERHUB_USERNAME }/yas-media:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/yas-media:${{ steps.prep.outputs.TAG }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/yas-media:latest
   GitOps-Update-Manifest:
     needs: Docker-Build-Push
     runs-on: ubuntu-latest

@@ -160,8 +160,8 @@ jobs:
           context: ./order
           push: true
           tags: |
-            ${ secrets.DOCKERHUB_USERNAME }/yas-order:${ steps.prep.outputs.TAG }
-            ${ secrets.DOCKERHUB_USERNAME }/yas-order:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/yas-order:${{ steps.prep.outputs.TAG }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/yas-order:latest
   GitOps-Update-Manifest:
     needs: Docker-Build-Push
     runs-on: ubuntu-latest

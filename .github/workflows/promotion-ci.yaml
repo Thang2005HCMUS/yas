@@ -160,8 +160,8 @@ jobs:
           context: ./promotion
           push: true
           tags: |
-            ${ secrets.DOCKERHUB_USERNAME }/yas-promotion:${ steps.prep.outputs.TAG }
-            ${ secrets.DOCKERHUB_USERNAME }/yas-promotion:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/yas-promotion:${{ steps.prep.outputs.TAG }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/yas-promotion:latest
   GitOps-Update-Manifest:
     needs: Docker-Build-Push
     runs-on: ubuntu-latest

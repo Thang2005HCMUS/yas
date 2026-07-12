@@ -160,8 +160,8 @@ jobs:
           context: ./cart
           push: true
           tags: |
-            ${ secrets.DOCKERHUB_USERNAME }/yas-cart:${ steps.prep.outputs.TAG }
-            ${ secrets.DOCKERHUB_USERNAME }/yas-cart:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/yas-cart:${{ steps.prep.outputs.TAG }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/yas-cart:latest
   GitOps-Update-Manifest:
     needs: Docker-Build-Push
     runs-on: ubuntu-latest

@@ -160,8 +160,8 @@ jobs:
           context: ./webhook
           push: true
           tags: |
-            ${ secrets.DOCKERHUB_USERNAME }/yas-webhook:${ steps.prep.outputs.TAG }
-            ${ secrets.DOCKERHUB_USERNAME }/yas-webhook:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/yas-webhook:${{ steps.prep.outputs.TAG }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/yas-webhook:latest
   GitOps-Update-Manifest:
     needs: Docker-Build-Push
     runs-on: ubuntu-latest

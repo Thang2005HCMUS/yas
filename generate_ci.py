@@ -168,8 +168,8 @@ jobs:
           context: ./{service}
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/yas-{service}:${{ steps.prep.outputs.TAG }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/yas-{service}:latest
+            ${{{{ secrets.DOCKERHUB_USERNAME }}}}/yas-{service}:${{{{ steps.prep.outputs.TAG }}}}
+            ${{{{ secrets.DOCKERHUB_USERNAME }}}}/yas-{service}:latest
   GitOps-Update-Manifest:
     needs: Docker-Build-Push
     runs-on: ubuntu-latest
