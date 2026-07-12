@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mesh-curl-allowed
+  namespace: yas
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mesh-curl-denied
+  namespace: yas
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mesh-curl-allowed
+  namespace: yas
+  labels:
+    app: mesh-curl-allowed
+spec:
+  serviceAccountName: mesh-curl-allowed
+  containers:
+    - name: curl
+      image: curlimages/curl:8.11.1
+      command: ["sleep", "365d"]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mesh-curl-denied
+  namespace: yas
+  labels:
+    app: mesh-curl-denied
+spec:
+  serviceAccountName: mesh-curl-denied
+  containers:
+    - name: curl
+      image: curlimages/curl:8.11.1
+      command: ["sleep", "365d"]

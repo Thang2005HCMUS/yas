@@ -1,0 +1,63 @@
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: yas-strict-mtls
+  namespace: yas
+spec:
+  mtls:
+    mode: STRICT
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: product-istio-mutual
+  namespace: yas
+spec:
+  host: product.yas.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: cart-istio-mutual
+  namespace: yas
+spec:
+  host: cart.yas.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: order-istio-mutual
+  namespace: yas
+spec:
+  host: order.yas.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: tax-istio-mutual
+  namespace: yas
+spec:
+  host: tax.yas.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: yas-fault-istio-mutual
+  namespace: yas
+spec:
+  host: yas-fault.yas.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
