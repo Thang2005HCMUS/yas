@@ -159,8 +159,9 @@ jobs:
         with:
           context: ./backoffice-bff
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/yas-backoffice-bff:${{ steps.prep.outputs.TAG }}
-
+          tags: |
+            ${ secrets.DOCKERHUB_USERNAME }/yas-backoffice-bff:${ steps.prep.outputs.TAG }
+            ${ secrets.DOCKERHUB_USERNAME }/yas-backoffice-bff:latest
   GitOps-Update-Manifest:
     needs: Docker-Build-Push
     runs-on: ubuntu-latest

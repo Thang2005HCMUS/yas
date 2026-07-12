@@ -159,8 +159,9 @@ jobs:
         with:
           context: ./recommendation
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/yas-recommendation:${{ steps.prep.outputs.TAG }}
-
+          tags: |
+            ${ secrets.DOCKERHUB_USERNAME }/yas-recommendation:${ steps.prep.outputs.TAG }
+            ${ secrets.DOCKERHUB_USERNAME }/yas-recommendation:latest
   GitOps-Update-Manifest:
     needs: Docker-Build-Push
     runs-on: ubuntu-latest

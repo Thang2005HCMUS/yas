@@ -159,8 +159,9 @@ jobs:
         with:
           context: ./location
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/yas-location:${{ steps.prep.outputs.TAG }}
-
+          tags: |
+            ${ secrets.DOCKERHUB_USERNAME }/yas-location:${ steps.prep.outputs.TAG }
+            ${ secrets.DOCKERHUB_USERNAME }/yas-location:latest
   GitOps-Update-Manifest:
     needs: Docker-Build-Push
     runs-on: ubuntu-latest

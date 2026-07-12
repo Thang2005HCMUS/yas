@@ -159,8 +159,9 @@ jobs:
         with:
           context: ./product
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/yas-product:${{ steps.prep.outputs.TAG }}
-
+          tags: |
+            ${ secrets.DOCKERHUB_USERNAME }/yas-product:${ steps.prep.outputs.TAG }
+            ${ secrets.DOCKERHUB_USERNAME }/yas-product:latest
   GitOps-Update-Manifest:
     needs: Docker-Build-Push
     runs-on: ubuntu-latest

@@ -159,8 +159,9 @@ jobs:
         with:
           context: ./payment-paypal
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/yas-payment-paypal:${{ steps.prep.outputs.TAG }}
-
+          tags: |
+            ${ secrets.DOCKERHUB_USERNAME }/yas-payment-paypal:${ steps.prep.outputs.TAG }
+            ${ secrets.DOCKERHUB_USERNAME }/yas-payment-paypal:latest
   GitOps-Update-Manifest:
     needs: Docker-Build-Push
     runs-on: ubuntu-latest

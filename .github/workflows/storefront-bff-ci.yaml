@@ -159,8 +159,9 @@ jobs:
         with:
           context: ./storefront-bff
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/yas-storefront-bff:${{ steps.prep.outputs.TAG }}
-
+          tags: |
+            ${ secrets.DOCKERHUB_USERNAME }/yas-storefront-bff:${ steps.prep.outputs.TAG }
+            ${ secrets.DOCKERHUB_USERNAME }/yas-storefront-bff:latest
   GitOps-Update-Manifest:
     needs: Docker-Build-Push
     runs-on: ubuntu-latest
