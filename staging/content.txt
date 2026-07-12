@@ -497,7 +497,7 @@ dependencies:
 ==========backoffice-bff/values.yaml==========
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-backoffice-bff
+    repository: docker.io/23122051/yas-backoffice-bff
     tag: latest
 
   nameOverride: backoffice-bff
@@ -570,7 +570,7 @@ dependencies:
 ==========backoffice-ui/values.yaml==========
 ui:
   image:
-    repository: ghcr.io/nashtech-garage/yas-backoffice
+    repository: docker.io/23122051/yas-backoffice
     tag: latest
   nameOverride: backoffice-ui
   fullnameOverride: backoffice-ui
@@ -615,7 +615,7 @@ dependencies:
 ==========cart/values.yaml==========
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-cart
+    repository: docker.io/23122051/yas-cart
     tag: latest
 
   nameOverride: cart
@@ -669,7 +669,7 @@ dependencies:
 ==========customer/values.yaml==========
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-customer
+    repository: docker.io/23122051/yas-customer
     tag: latest
 
   nameOverride: customer
@@ -726,7 +726,7 @@ dependencies:
 ==========inventory/values.yaml==========
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-inventory
+    repository: docker.io/23122051/yas-inventory
     tag: latest
 
   nameOverride: inventory
@@ -771,7 +771,7 @@ dependencies:
 ==========location/values.yaml==========
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-location
+    repository: docker.io/23122051/yas-location
     tag: latest
 
   nameOverride: location
@@ -816,7 +816,7 @@ dependencies:
 ==========media/values.yaml==========
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-media
+    repository: docker.io/23122051/yas-media
     tag: latest
 
   nameOverride: media
@@ -871,7 +871,7 @@ dependencies:
 ==========order/values.yaml==========
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-order
+    repository: docker.io/23122051/yas-order
     tag: latest
 
   nameOverride: order
@@ -924,7 +924,7 @@ dependencies:
 ==========payment/values.yaml==========
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-payment
+    repository: docker.io/23122051/yas-payment
     tag: latest
 
   nameOverride: payment
@@ -977,7 +977,7 @@ dependencies:
 ==========payment-paypal/values.yaml==========
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-payment-paypal
+    repository: docker.io/23122051/yas-payment-paypal
     tag: latest
 
   nameOverride: payment-paypal
@@ -1030,7 +1030,7 @@ dependencies:
 ==========product/values.yaml==========
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-product
+    repository: docker.io/23122051/yas-product
     tag: latest
 
   nameOverride: product
@@ -1084,7 +1084,7 @@ dependencies:
 ==========promotion/values.yaml==========
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-promotion
+    repository: docker.io/23122051/yas-promotion
     tag: latest
 
   nameOverride: promotion
@@ -1129,7 +1129,7 @@ dependencies:
 ==========rating/values.yaml==========
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-rating
+    repository: docker.io/23122051/yas-rating
     tag: latest
 
   nameOverride: rating
@@ -1174,7 +1174,7 @@ dependencies:
 ==========recommendation/values.yaml==========
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-recommendation
+    repository: docker.io/23122051/yas-recommendation
     tag: latest
 
   nameOverride: recommendation
@@ -1231,7 +1231,7 @@ dependencies:
 ==========sampledata/values.yaml==========
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-sampledata
+    repository: docker.io/23122051/yas-sampledata
     tag: latest
 
   nameOverride: sampledata
@@ -1285,7 +1285,7 @@ dependencies:
 ==========search/values.yaml==========
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-search
+    repository: docker.io/23122051/yas-search
     tag: latest
 
   nameOverride: search
@@ -1353,7 +1353,7 @@ data:
 ==========storefront-bff/values.yaml==========
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-storefront-bff
+    repository: docker.io/23122051/yas-storefront-bff
     tag: latest
 
   nameOverride: storefront-bff
@@ -1441,7 +1441,7 @@ data:
 ==========storefront-ui/values.yaml==========
 ui:
   image:
-    repository: ghcr.io/nashtech-garage/yas-storefront
+    repository: docker.io/23122051/yas-storefront
     tag: latest
   nameOverride: storefront-ui
   fullnameOverride: storefront-ui
@@ -1849,7 +1849,7 @@ dependencies:
 ==========tax/values.yaml==========
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-tax
+    repository: docker.io/23122051/yas-tax
     tag: latest
 
   nameOverride: tax
@@ -2275,7 +2275,7 @@ affinity: {}
 ==========values.template.yaml==========
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-{{service}}
+    repository: docker.io/23122051/yas-{{service}}
     tag: latest
 
   nameOverride: {{service}}
@@ -2322,7 +2322,7 @@ dependencies:
 ==========webhook/values.yaml==========
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-webhook
+    repository: docker.io/23122051/yas-webhook
     tag: latest
 
   nameOverride: webhook

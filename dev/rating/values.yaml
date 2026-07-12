@@ -1,6 +1,6 @@
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-rating
+    repository: docker.io/23122051/yas-rating
     tag: 82d3d65
 
   nameOverride: rating

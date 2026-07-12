@@ -1,6 +1,6 @@
 backend:
   image:
-    repository: ghcr.io/nashtech-garage/yas-cart
+    repository: docker.io/23122051/yas-cart
     tag: v1.0.0
 
   nameOverride: cart
