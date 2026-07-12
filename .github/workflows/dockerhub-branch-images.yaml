@@ -1,0 +1,105 @@
+name: Docker Hub branch images
+
+on:
+  push:
+    branches: ["**"]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-push:
+    name: Build and push branch images
+    runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_NAMESPACE: ${{ secrets.DOCKERHUB_USERNAME }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Build Java artifacts once
+        run: mvn -DskipTests package
+
+      - name: Prepare JARs expected by Dockerfiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          services=(backoffice-bff cart customer inventory location media order payment payment-paypal product promotion rating recommendation sampledata search storefront-bff tax webhook)
+          for service in "${services[@]}"; do
+            rm -f "$service/target/app.jar"
+            jar_file="$(find "$service/target" -maxdepth 1 -type f -name '*.jar' ! -name 'app.jar' ! -name 'original-*.jar' ! -name '*-plain.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar' | sort | head -n 1)"
+            test -n "$jar_file"
+            cp "$jar_file" "$service/target/app.jar"
+          done
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push deployable images
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$DOCKERHUB_NAMESPACE"
+          short_sha="${GITHUB_SHA:0:12}"
+          services=(
+            "backoffice:yas-backoffice"
+            "backoffice-bff:yas-backoffice-bff"
+            "cart:yas-cart"
+            "customer:yas-customer"
+            "inventory:yas-inventory"
+            "location:yas-location"
+            "media:yas-media"
+            "order:yas-order"
+            "payment:yas-payment"
+            "payment-paypal:yas-payment-paypal"
+            "product:yas-product"
+            "promotion:yas-promotion"
+            "rating:yas-rating"
+            "recommendation:yas-recommendation"
+            "sampledata:yas-sampledata"
+            "search:yas-search"
+            "storefront:yas-storefront"
+            "storefront-bff:yas-storefront-bff"
+            "tax:yas-tax"
+            "webhook:yas-webhook"
+          )
+
+          for service in "${services[@]}"; do
+            context="${service%%:*}"
+            image="${service##*:}"
+            tags=(--tag "docker.io/$DOCKERHUB_NAMESPACE/$image:$short_sha")
+            if [[ "$GITHUB_REF_NAME" == "main" ]]; then
+              tags+=(--tag "docker.io/$DOCKERHUB_NAMESPACE/$image:main")
+              tags+=(--tag "docker.io/$DOCKERHUB_NAMESPACE/$image:latest")
+            fi
+            docker buildx build --push --file "$context/Dockerfile" "${tags[@]}" "$context"
+          done
+
+      - name: Publish tag summary
+        shell: bash
+        run: |
+          {
+            echo "## Docker Hub images"
+            echo "- Commit tag: \`${GITHUB_SHA:0:12}\`"
+            if [[ "$GITHUB_REF_NAME" == "main" ]]; then
+              echo "- The same images were also pushed with tags \`main\` and \`latest\`."
+            fi
+            echo "- Namespace: \`${DOCKERHUB_NAMESPACE}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

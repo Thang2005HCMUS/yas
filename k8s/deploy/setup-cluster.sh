@@ -64,6 +64,9 @@ helm upgrade --install elasticsearch-cluster ./elasticsearch/elasticsearch-clust
 --set elasticsearch.replicas="$ELASTICSEARCH_REPLICAES" \
 --set kibana.ingress.hostname="kibana.$DOMAIN"
 
+# Observability is not required for Project 02. Set INSTALL_OBSERVABILITY=true
+# only when the team explicitly wants the optional Grafana/Loki/Tempo stack.
+if [[ "${INSTALL_OBSERVABILITY:-false}" == "true" ]]; then
 #Install loki
 helm upgrade --install loki grafana/loki \
  --create-namespace --namespace observability \
@@ -118,6 +121,7 @@ helm upgrade --install grafana ./observability/grafana \
 --set grafana.password="$GRAFANA_PASSWORD" \
 --set postgresql.username="$POSTGRESQL_USERNAME" \
 --set postgresql.password="$POSTGRESQL_PASSWORD"
+fi
 
 helm upgrade --install zookeeper ./zookeeper \
  --namespace zookeeper --create-namespace

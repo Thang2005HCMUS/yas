@@ -1,0 +1,87 @@
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+  }
+
+  parameters {
+    string(name: 'DOCKERHUB_NAMESPACE', defaultValue: 'thang2005hcmus', description: 'Docker Hub namespace that owns yas-* images')
+    string(name: 'DEPLOY_NAMESPACE', defaultValue: 'developer', description: 'Disposable Kubernetes namespace; use developer or developer-<name>')
+    string(name: 'ACCESS_HOST', defaultValue: 'developer.yas.local', description: 'Hostname developers map to the Kubernetes node IP in /etc/hosts')
+    booleanParam(name: 'CREATE_IMAGE_PULL_SECRET', defaultValue: false, description: 'Enable only when Docker Hub images are private')
+    string(name: 'BACKOFFICE_BRANCH', defaultValue: 'main', description: 'Branch for backoffice UI')
+    string(name: 'BACKOFFICE_BFF_BRANCH', defaultValue: 'main', description: 'Branch for backoffice BFF')
+    string(name: 'CART_BRANCH', defaultValue: 'main', description: 'Branch for cart')
+    string(name: 'CUSTOMER_BRANCH', defaultValue: 'main', description: 'Branch for customer')
+    string(name: 'INVENTORY_BRANCH', defaultValue: 'main', description: 'Branch for inventory')
+    string(name: 'LOCATION_BRANCH', defaultValue: 'main', description: 'Branch for location')
+    string(name: 'MEDIA_BRANCH', defaultValue: 'main', description: 'Branch for media')
+    string(name: 'ORDER_BRANCH', defaultValue: 'main', description: 'Branch for order')
+    string(name: 'PAYMENT_BRANCH', defaultValue: 'main', description: 'Branch for payment')
+    string(name: 'PAYMENT_PAYPAL_BRANCH', defaultValue: 'main', description: 'Branch for payment-paypal')
+    string(name: 'PRODUCT_BRANCH', defaultValue: 'main', description: 'Branch for product')
+    string(name: 'PROMOTION_BRANCH', defaultValue: 'main', description: 'Branch for promotion')
+    string(name: 'RATING_BRANCH', defaultValue: 'main', description: 'Branch for rating')
+    string(name: 'RECOMMENDATION_BRANCH', defaultValue: 'main', description: 'Branch for recommendation')
+    string(name: 'SAMPLEDATA_BRANCH', defaultValue: 'main', description: 'Branch for sampledata')
+    string(name: 'SEARCH_BRANCH', defaultValue: 'main', description: 'Branch for search')
+    string(name: 'STOREFRONT_BRANCH', defaultValue: 'main', description: 'Branch for storefront UI')
+    string(name: 'STOREFRONT_BFF_BRANCH', defaultValue: 'main', description: 'Branch for storefront BFF')
+    string(name: 'TAX_BRANCH', defaultValue: 'main', description: 'Branch for tax')
+    string(name: 'WEBHOOK_BRANCH', defaultValue: 'main', description: 'Branch for webhook')
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+        sh 'test -x ci/developer-deploy.sh'
+      }
+    }
+
+    stage('Create optional image pull secret') {
+      when {
+        expression { return params.CREATE_IMAGE_PULL_SECRET }
+      }
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_TOKEN')]) {
+          sh '''
+            set -euo pipefail
+            kubectl create namespace "$DEPLOY_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+            kubectl create secret docker-registry dockerhub-registry \
+              --namespace "$DEPLOY_NAMESPACE" \
+              --docker-server=https://index.docker.io/v1/ \
+              --docker-username="$DOCKER_USER" \
+              --docker-password="$DOCKER_TOKEN" \
+              --dry-run=client -o yaml | kubectl apply -f -
+          '''
+        }
+      }
+    }
+
+    stage('Deploy developer environment') {
+      steps {
+        sh '''
+          set -euo pipefail
+          export IMAGE_PULL_SECRET=""
+          if [ "$CREATE_IMAGE_PULL_SECRET" = "true" ]; then
+            export IMAGE_PULL_SECRET=dockerhub-registry
+          fi
+          ci/developer-deploy.sh
+        '''
+      }
+    }
+
+    stage('Publish developer access details') {
+      steps {
+        script {
+          def details = readFile('developer-access.txt')
+          currentBuild.description = "Namespace: ${params.DEPLOY_NAMESPACE}"
+          echo details
+        }
+      }
+    }
+  }
+}
