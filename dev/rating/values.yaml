@@ -1,7 +1,7 @@
 backend:
   image:
     repository: docker.io/23122051/yas-rating
-    tag: 82d3d65
+    tag: 52190b4
 
   nameOverride: rating
   fullnameOverride: rating
