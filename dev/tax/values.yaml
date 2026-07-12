@@ -1,7 +1,7 @@
 backend:
   image:
     repository: docker.io/23122051/yas-tax
-    tag: 82d3d65
+    tag: 52190b4
 
   nameOverride: tax
   fullnameOverride: tax
