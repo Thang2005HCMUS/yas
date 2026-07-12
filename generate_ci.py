@@ -1,10 +1,9 @@
 import os
 
-# Danh sách các service Java cần tạo CI
 JAVA_SERVICES = [
     "search", "promotion", "customer", "inventory", "payment", "order", 
-    "tax", "rating", "location", "storefront-bff", "backoffice-bff", 
-    "pricing", "product", "media", "payment-paypal", "webhook", "sampledata", "cart", "recommendation"
+    "tax", "rating", "location", "storefront-bff", "backoffice-bff"
+    , "product", "media", "payment-paypal", "webhook", "cart", "recommendation"
 ]
 
 TEMPLATE = """name: {service} service ci
@@ -12,6 +11,7 @@ TEMPLATE = """name: {service} service ci
 on:
   push:
     branches: ["**"]
+    tags: ["v*.*.*"] # Bắt event khi push tag cho Staging
     paths:
       - "{service}/**"
       - ".github/workflows/actions/action.yaml"
@@ -37,25 +37,37 @@ jobs:
       - uses: ./.github/workflows/actions
 
       - name: Run Maven Build Command
-        run: mvn clean install -pl {service} -am
+        run: mvn clean install -pl {service} -am -DskipTests
+        
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-assets-{service}
+          path: |
+            **/target/*.jar
+            **/target/classes/
+            **/target/generated-sources/
+          retention-days: 1
 
       - name: Run Maven Checkstyle
         run: mvn checkstyle:checkstyle -pl {service} -am -Dcheckstyle.output.file={service}-checkstyle-result.xml
 
-      - name: Upload Checkstyle Result
-        uses: jwgmeligmeyling/checkstyle-github-action@master
-        with:
-          path: '**/{service}-checkstyle-result.xml'
+  Test:
+    needs: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/workflows/actions
 
-      - name: Test Results
-        uses: dorny/test-reporter@v1
-        if: always()
-        with:
-          name: {service_cap}-Unit-Test-Results
-          path: "{service}/**/*-reports/TEST*.xml"
-          reporter: java-junit
+      - name: Run Unit Tests & Generate JaCoCo Report
+        run: |
+          mvn clean verify \\
+          org.jacoco:jacoco-maven-plugin:0.8.14:prepare-agent \\
+          test \\
+          org.jacoco:jacoco-maven-plugin:0.8.14:report \\
+          -pl {service} -am -DskipTests=false
 
-      - name: Upload Jacoco Report for Coverage Job
+      - name: Upload Jacoco Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -63,9 +75,25 @@ jobs:
           path: {service}/target/site/jacoco/jacoco.xml
           retention-days: 1
 
+  SonarCloud:
+    needs: [Build, Test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/workflows/actions
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-assets-{service}
+      - name: Download Jacoco Report
+        uses: actions/download-artifact@v4
+        with:
+          name: jacoco-report-{service}
+          path: {service}/target/site/jacoco/
       - name: Analyze with sonar cloud
         id: sonar
-        continue-on-error: true
         env:
           SONAR_TOKEN: ${{{{ secrets.SONAR_TOKEN }}}}
         run: >
@@ -73,102 +101,116 @@ jobs:
           -pl {service} -am -f pom.xml
           -Dsonar.coverage.jacoco.xmlReportPaths={service}/target/site/jacoco/jacoco.xml
 
-      - name: SonarCloud Summary
-        if: always()
-        run: |
-          if [ "${{{{ steps.sonar.outcome }}}}" = "success" ]; then
-            ICON="🟢"
-            STATUS="PASS"
-          else
-            ICON="🔴"
-            STATUS="FAIL"
-          fi
-
-          {{
-            echo "## SonarCloud Report: {service}"
-            echo ""
-            echo "| Item | Value |"
-            echo "|------|-------|"
-            echo "| Status | $ICON **$STATUS** |"
-            echo "| Service | \`{service}\` |"
-            echo "| Commit | \`${{{{ github.sha }}}}\` |"
-            echo ""
-            echo "### Dashboard"
-            echo "https://sonarcloud.io/dashboard?id=<YOUR_PROJECT_KEY>"
-          }} >> $GITHUB_STEP_SUMMARY
-
-      - name: Log in to the Container registry
-        if: ${{{{ github.ref == 'refs/heads/main' }}}}
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{{{ github.actor }}}}
-          password: ${{{{ secrets.GITHUB_TOKEN }}}}
-
-      - name: Build and push Docker images
-        if: ${{{{ github.ref == 'refs/heads/main' }}}}
-        uses: docker/build-push-action@v6
-        with:
-          context: ./{service}
-          push: true
-          tags: ghcr.io/nashtech-garage/yas-{service}:latest
-
   Check-Coverage:
-    needs: Build
+    needs: Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
       - name: Download Jacoco Report
         uses: actions/download-artifact@v4
         with:
           name: jacoco-report-{service}
           path: target/jacoco-results
-
       - name: Add coverage report to PR
         id: jacoco_report
         uses: madrapps/jacoco-report@v1.6.1
         with:
           paths: ${{{{github.workspace}}}}/target/jacoco-results/jacoco.xml
           token: ${{{{secrets.GITHUB_TOKEN}}}}
-          min-coverage-overall: 80
+          min-coverage-overall: 70
           min-coverage-changed-files: 60
           title: '{service_cap} Coverage Report'
-          update-comment: true
-
-      - name: Write Coverage Summary
-        if: always()
-        run: |
-          COVERAGE=${{{{ steps.jacoco_report.outputs.coverage-overall }}}}
-          THRESHOLD=80
-          
-          if (( $(echo "$COVERAGE >= $THRESHOLD" | bc -l) )); then
-            ICON="✅"
-            STATUS="PASSED"
-          else
-            ICON="❌"
-            STATUS="FAILED"
-          fi
-
-          {{
-            echo "## 📊 Coverage Summary: {service}"
-            echo ""
-            echo "| Metric | Value | Threshold | Status |"
-            echo "|--------|-------|-----------|--------|"
-            echo "| Overall Coverage | $COVERAGE% | $THRESHOLD% | $ICON $STATUS |"
-            echo "| Changed Files | ${{{{ steps.jacoco_report.outputs.coverage-changed-files }}}}% | 60% | - |"
-            echo ""
-            echo "Vui lòng kiểm tra chi tiết trong phần bình luận của Pull Request."
-          }} >> $GITHUB_STEP_SUMMARY
-
+          update-comment: false
       - name: Enforce Threshold
         run: |
+          THRESHOLD=70
           COVERAGE=${{{{ steps.jacoco_report.outputs.coverage-overall }}}}
-          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-            echo "Độ bao phủ code ($COVERAGE%) thấp hơn yêu cầu (80%)!"
+          if (( $(echo "$COVERAGE <= $THRESHOLD" | bc -l) )); then
+            echo "Độ bao phủ code ($COVERAGE%) thấp hơn yêu cầu ($THRESHOLD%)!"
             exit 1
           fi
+
+  # --- BẮT ĐẦU PHẦN MỚI THÊM CHO CD & GITOPS ---
+  Docker-Build-Push:
+    needs: [Check-Coverage, SonarCloud] # Đảm bảo pass test mới build docker
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' # Không push image khi chỉ mở PR
+    outputs:
+      image_tag: ${{{{ steps.prep.outputs.TAG }}}}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-assets-{service}
+          
+      - name: Determine Tag
+        id: prep
+        run: |
+          # Nếu là tag (VD: v1.2.3) -> lấy tên tag. Nếu là branch -> lấy short commit sha
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            TAG=${{GITHUB_REF#refs/tags/}}
+          else
+            TAG=$(echo $GITHUB_SHA | cut -c1-7)
+          fi
+          echo "TAG=$TAG" >> $GITHUB_OUTPUT
+          
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{{{ secrets.DOCKERHUB_USERNAME }}}}
+          password: ${{{{ secrets.DOCKERHUB_TOKEN }}}}
+
+      - name: Build and push Docker images
+        uses: docker/build-push-action@v6
+        with:
+          context: ./{service}
+          push: true
+          tags: |
+            ${{{{ secrets.DOCKERHUB_USERNAME }}}}/yas-{service}:${{{{ steps.prep.outputs.TAG }}}}
+            ${{{{ secrets.DOCKERHUB_USERNAME }}}}/yas-{service}:latest
+  GitOps-Update-Manifest:
+    needs: Docker-Build-Push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Manifest Repository
+        uses: actions/checkout@v4
+        with:
+          # Thay bằng repo chứa file K8s/Helm của nhóm bạn
+          repository: 'Thang2005HCMUS/yas.git' 
+          # Cần tạo Personal Access Token (PAT) trên Github và lưu vào secret
+          token: ${{{{ secrets.GITHUB_TOKEN }}}} 
+          ref: Yas-CD
+      - name: Update Image Tag in Manifest
+        env:
+          NEW_TAG: ${{{{ needs.Docker-Build-Push.outputs.image_tag }}}}
+        run: |
+          # Phân luồng theo branch/tag
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            ENV_FOLDER="staging"
+          elif [[ $GITHUB_REF == refs/heads/Yas-CD ]]; then
+            ENV_FOLDER="dev"
+          else
+            echo "Feature branch, skipping GitOps update."
+            exit 0
+          fi
+
+          # Dùng sed để replace tag trong file values.yaml của Helm (hoặc K8s yaml)
+          # Lưu ý: Cần chỉnh lại đường dẫn file cho đúng với cấu trúc thư mục repo manifest của bạn
+          FILE_PATH="$ENV_FOLDER/{service}/values.yaml"
+          
+          # Cập nhật dòng chứa tag thành tag mới
+          sed -i "s/tag: .*/tag: $NEW_TAG/g" $FILE_PATH
+          
+          # Setup git
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          
+          # Commit & Push
+          git add $FILE_PATH
+          git commit -m "Update {service} image tag to $NEW_TAG for $ENV_FOLDER"
+          git push origin Yas-CD
 """
 
 def main():

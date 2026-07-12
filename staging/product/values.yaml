@@ -1,0 +1,19 @@
+backend:
+  image:
+    repository: docker.io/23122051/yas-product
+    tag: v1.0.0
+
+  nameOverride: product
+  fullnameOverride: product
+  databaseName: product
+  ingress:
+    enabled: true
+  extraVolumes:
+    - name: product-application-config
+      configMap:
+        name: product-application-configmap
+  extraVolumeMounts:
+    - name: product-application-config
+      mountPath: /opt/yas/product
+  extraApplicationConfigPaths:
+    - /opt/yas/product/product-application.yaml  

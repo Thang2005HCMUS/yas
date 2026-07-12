@@ -1,0 +1,10 @@
+backend:
+  image:
+    repository: docker.io/23122051/yas-inventory
+    tag: e91d692
+
+  nameOverride: inventory
+  fullnameOverride: inventory
+  databaseName: inventory
+  ingress:
+    enabled: true

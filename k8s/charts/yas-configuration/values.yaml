@@ -260,10 +260,11 @@ customerApplicationConfig:
 
 # Search application config custom
 searchApplicationConfig:
-  elasticsearch:
-    url: elasticsearch-es-http.elasticsearch
-    username: ${ELASTICSEARCH_USERNAME}
-    password: ${ELASTICSEARCH_PASSWORD}
+  spring:
+    elasticsearch:
+      url: elasticsearch-es-http.elasticsearch
+      username: ${ELASTICSEARCH_USERNAME}
+      password: ${ELASTICSEARCH_PASSWORD}
 
 # Payment-paypal application config custom
 paymentPaypalApplicationConfig:

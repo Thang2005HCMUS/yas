@@ -1,0 +1,22 @@
+backend:
+  image:
+    repository: docker.io/23122051/yas-search
+    tag: v1.0.0
+
+  nameOverride: search
+  fullnameOverride: search
+  databaseName: search
+  ingress:
+    enabled: true
+  extraEnvFroms:
+    - secretRef:
+        name: yas-elasticsearch-credentials-secret
+  extraVolumes:
+    - name: search-application
+      configMap:
+        name: search-application-configmap
+  extraVolumeMounts:
+    - name: search-application
+      mountPath: /opt/yas/search
+  extraApplicationConfigPaths:
+    - /opt/yas/search/search-application.yaml

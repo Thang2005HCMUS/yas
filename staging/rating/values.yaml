@@ -1,0 +1,10 @@
+backend:
+  image:
+    repository: docker.io/23122051/yas-rating
+    tag: v1.0.0
+
+  nameOverride: rating
+  fullnameOverride: rating
+  databaseName: rating
+  ingress:
+    enabled: true

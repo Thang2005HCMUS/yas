@@ -1,0 +1,8 @@
+backend:
+  image:
+    repository: docker.io/23122051/yas-webhook
+    tag: v1.0.0
+
+  nameOverride: webhook
+  fullnameOverride: webhook
+  databaseName: webhook

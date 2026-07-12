@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: jdk-debug-pod
+  labels:
+    app: debug
+spec:
+  containers:
+  - name: jdk-container
+    image: openjdk:25-slim
+    command: ["sleep", "86400"]
+  restartPolicy: Never

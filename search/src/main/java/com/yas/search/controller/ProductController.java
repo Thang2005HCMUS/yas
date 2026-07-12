@@ -38,4 +38,16 @@ public class ProductController {
     public ResponseEntity<ProductNameListVm> productSearchAutoComplete(@RequestParam String keyword) {
         return ResponseEntity.ok(productService.autoCompleteProductName(keyword));
     }
+
+    public void triggerSonarDemo() {
+        String password = "123456";
+
+        try {
+            Integer.parseInt("abc");
+        } catch (Exception e) {
+            // SonarQube should detect this empty catch block
+        }
+
+        System.out.println(password);
+    }
 }
