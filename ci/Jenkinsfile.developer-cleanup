@@ -1,0 +1,24 @@
+pipeline {
+  agent any
+
+  options { timestamps() }
+
+  parameters {
+    string(name: 'DEPLOY_NAMESPACE', defaultValue: 'developer', description: 'Developer namespace to remove')
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+        sh 'test -x ci/developer-cleanup.sh'
+      }
+    }
+
+    stage('Delete developer deployment') {
+      steps {
+        sh 'ci/developer-cleanup.sh'
+      }
+    }
+  }
+}

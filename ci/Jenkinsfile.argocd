@@ -1,0 +1,210 @@
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+  }
+
+  parameters {
+    choice(name: 'DEPLOY_ENV', choices: ['auto', 'dev', 'staging'], description: 'auto: main -> dev, Git tag v* -> staging')
+    string(name: 'DOCKERHUB_NAMESPACE', defaultValue: 'thang2005hcmus', description: 'Docker Hub namespace, without docker.io/')
+    string(name: 'GITOPS_BRANCH_OVERRIDE', defaultValue: 'feature/argocd-dev-staging', description: 'Branch Jenkins can push GitOps image-tag commits to')
+    booleanParam(name: 'PUSH_GITOPS_COMMIT', defaultValue: true, description: 'Commit and push updated GitOps image tags')
+  }
+
+  environment {
+    DOCKERHUB_CREDENTIALS = 'dockerhub-credentials'
+    GITHUB_CREDENTIALS = 'github-credentials'
+    GIT_AUTHOR_NAME = 'jenkins'
+    GIT_AUTHOR_EMAIL = 'jenkins@yas.local'
+    GIT_COMMITTER_NAME = 'jenkins'
+    GIT_COMMITTER_EMAIL = 'jenkins@yas.local'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+        sh '''
+          set -eux
+          pwd
+          test -f pom.xml
+          test -f ci/Jenkinsfile.argocd
+        '''
+      }
+    }
+
+    stage('Resolve target') {
+      steps {
+        script {
+          env.SHORT_SHA = sh(returnStdout: true, script: 'git rev-parse --short=12 HEAD').trim()
+          def exactTag = sh(returnStdout: true, script: 'git describe --tags --exact-match 2>/dev/null || true').trim()
+          def detectedBranch = sh(returnStdout: true, script: 'git rev-parse --abbrev-ref HEAD').trim()
+          def containingBranch = sh(returnStdout: true, script: "git branch -r --contains HEAD | sed -n 's#^[ *]*origin/##p' | head -n 1").trim()
+          def branchName = params.GITOPS_BRANCH_OVERRIDE?.trim() ?: env.CHANGE_BRANCH ?: env.BRANCH_NAME ?: env.GIT_BRANCH ?: containingBranch ?: detectedBranch
+          branchName = branchName.replaceFirst(/^origin\\//, '')
+          env.GITOPS_BRANCH = params.GITOPS_BRANCH_OVERRIDE?.trim() ?: env.CHANGE_BRANCH ?: branchName
+
+          if (!params.DOCKERHUB_NAMESPACE?.trim()) {
+            error('DOCKERHUB_NAMESPACE is required and must match the Docker Hub account that owns the target repositories.')
+          }
+
+          if (params.DEPLOY_ENV == 'dev') {
+            env.TARGET_ENV = 'dev'
+            env.IMAGE_TAG = env.SHORT_SHA
+          } else if (params.DEPLOY_ENV == 'staging') {
+            env.TARGET_ENV = 'staging'
+            env.IMAGE_TAG = exactTag ?: "v-${env.SHORT_SHA}"
+          } else if (exactTag ==~ /^v\\d+\\.\\d+\\.\\d+$/) {
+            env.TARGET_ENV = 'staging'
+            env.IMAGE_TAG = exactTag
+          } else if (branchName == 'main') {
+            env.TARGET_ENV = 'dev'
+            env.IMAGE_TAG = env.SHORT_SHA
+          } else if (branchName.startsWith('feature/')) {
+            env.TARGET_ENV = 'dev'
+            env.IMAGE_TAG = env.SHORT_SHA
+          } else {
+            error("No CD target for branch '${branchName}'. Use main for dev or tag vX.Y.Z for staging.")
+          }
+
+          echo "Target environment: ${env.TARGET_ENV}"
+          echo "Image tag: ${env.IMAGE_TAG}"
+        }
+      }
+    }
+
+    stage('Build Java artifacts') {
+      steps {
+        sh '''
+          set -eux
+          if [ -f /.dockerenv ]; then
+            docker run --rm \
+              --volumes-from "$HOSTNAME" \
+              -u "$(id -u):$(id -g)" \
+              -w "$PWD" \
+              -e MAVEN_CONFIG=/tmp/.m2 \
+              maven:3.9.11-eclipse-temurin-25 \
+              mvn -DskipTests package
+          else
+            docker run --rm \
+              -u "$(id -u):$(id -g)" \
+              -v "$PWD:/workspace" \
+              -v "$HOME/.m2:/tmp/.m2" \
+              -w /workspace \
+              -e MAVEN_CONFIG=/tmp/.m2 \
+              maven:3.9.11-eclipse-temurin-25 \
+              mvn -DskipTests package
+          fi
+        '''
+      }
+    }
+
+    stage('Docker login') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: env.DOCKERHUB_CREDENTIALS, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_TOKEN')]) {
+          sh 'echo "$DOCKER_TOKEN" | docker login -u "$DOCKER_USER" --password-stdin'
+        }
+      }
+    }
+
+    stage('Prepare Docker artifacts') {
+      steps {
+        sh '''
+          set -eux
+          for service in backoffice-bff cart customer inventory location media order payment payment-paypal product promotion rating recommendation sampledata search storefront-bff tax webhook; do
+            rm -f "${service}/target/app.jar"
+            jar_file="$(find "${service}/target" -maxdepth 1 -type f -name '*.jar' ! -name 'app.jar' ! -name 'original-*.jar' ! -name '*-plain.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar' | sort | head -n 1)"
+            test -n "$jar_file"
+            cp "$jar_file" "${service}/target/app.jar"
+          done
+        '''
+      }
+    }
+
+    stage('Build and push images') {
+      steps {
+        script {
+          def services = [
+            [context: 'backoffice', image: 'yas-backoffice'],
+            [context: 'backoffice-bff', image: 'yas-backoffice-bff'],
+            [context: 'cart', image: 'yas-cart'],
+            [context: 'customer', image: 'yas-customer'],
+            [context: 'inventory', image: 'yas-inventory'],
+            [context: 'location', image: 'yas-location'],
+            [context: 'media', image: 'yas-media'],
+            [context: 'order', image: 'yas-order'],
+            [context: 'payment', image: 'yas-payment'],
+            [context: 'payment-paypal', image: 'yas-payment-paypal'],
+            [context: 'product', image: 'yas-product'],
+            [context: 'promotion', image: 'yas-promotion'],
+            [context: 'rating', image: 'yas-rating'],
+            [context: 'recommendation', image: 'yas-recommendation'],
+            [context: 'sampledata', image: 'yas-sampledata'],
+            [context: 'search', image: 'yas-search'],
+            [context: 'storefront', image: 'yas-storefront'],
+            [context: 'storefront-bff', image: 'yas-storefront-bff'],
+            [context: 'tax', image: 'yas-tax'],
+            [context: 'webhook', image: 'yas-webhook']
+          ]
+
+          services.each { svc ->
+            def imageRef = "docker.io/${params.DOCKERHUB_NAMESPACE}/${svc.image}:${env.IMAGE_TAG}"
+            sh """
+              set -eux
+              docker build -t '${imageRef}' -f '${svc.context}/Dockerfile' '${svc.context}'
+              docker push '${imageRef}'
+            """
+          }
+        }
+      }
+    }
+
+    stage('Update GitOps values') {
+      steps {
+        sh '''
+          set -eux
+          chmod +x ci/update-gitops-images.sh
+          ci/update-gitops-images.sh "$TARGET_ENV" "$DOCKERHUB_NAMESPACE" "$IMAGE_TAG"
+          git diff -- k8s/gitops
+        '''
+      }
+    }
+
+    stage('Commit GitOps change') {
+      when {
+        expression { return params.PUSH_GITOPS_COMMIT }
+      }
+      steps {
+        withCredentials([usernamePassword(credentialsId: env.GITHUB_CREDENTIALS, usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+          sh '''
+            set -eux
+            git config user.name "$GIT_AUTHOR_NAME"
+            git config user.email "$GIT_AUTHOR_EMAIL"
+            git add "k8s/gitops/envs/${TARGET_ENV}/values/images.yaml"
+            if git diff --cached --quiet; then
+              echo "No GitOps image-tag changes to commit."
+            else
+              if [ "$TARGET_ENV" = "dev" ]; then
+                git commit -m "Update dev images to ${IMAGE_TAG}"
+              else
+                git commit -m "Release staging ${IMAGE_TAG}"
+              fi
+              remote_url="$(git config --get remote.origin.url)"
+              repo_path="${remote_url#https://github.com/}"
+              repo_path="${repo_path%.git}.git"
+              git push "https://${GIT_USER}:${GIT_TOKEN}@github.com/${repo_path}" HEAD:${GITOPS_BRANCH}
+            fi
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      sh 'docker logout || true'
+    }
+  }
+}

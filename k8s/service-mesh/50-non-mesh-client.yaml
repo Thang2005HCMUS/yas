@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mesh-negative-test
+  labels:
+    istio-injection: disabled
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: non-mesh-curl
+  namespace: mesh-negative-test
+  labels:
+    app: non-mesh-curl
+spec:
+  containers:
+    - name: curl
+      image: curlimages/curl:8.11.1
+      command: ["sleep", "365d"]
