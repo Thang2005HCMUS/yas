@@ -1,7 +1,7 @@
 backend:
   image:
     repository: docker.io/23122051/yas-product
-    tag: e91d692
+    tag: b78966d
 
   nameOverride: product
   fullnameOverride: product
